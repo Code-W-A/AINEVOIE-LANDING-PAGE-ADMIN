@@ -54,9 +54,30 @@ function classifySmtpError(error: unknown): ClassifiedError {
   const responseText =
     typeof errorObj?.response === "string" ? errorObj.response : message;
 
+  const normalizedResponse = responseText.toLowerCase();
+  const authOrConfigFailure =
+    [530, 534, 535].includes(responseCode) ||
+    [
+      "authentication",
+      "auth",
+      "credentials",
+      "invalid login",
+      "login",
+      "password",
+      "username",
+      "relay access denied",
+    ].some((pattern) => normalizedResponse.includes(pattern));
   const permanentSmtpCode = responseCode >= 500 && responseCode <= 599;
   const transientSmtpCode = responseCode >= 400 && responseCode <= 499;
   const permanentByMessage = /\b5\d\d\b/.test(responseText);
+
+  if (authOrConfigFailure) {
+    return {
+      kind: "permanent",
+      code: responseCode ? `SMTP_${responseCode}` : code,
+      message,
+    };
+  }
 
   if (permanentSmtpCode || permanentByMessage) {
     return {

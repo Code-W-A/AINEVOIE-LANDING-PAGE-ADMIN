@@ -35,6 +35,7 @@ import {
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
 type SubscribersTabValue = "add" | "list";
+type SubscriberStatusFilter = NewsletterSubscriberStatus;
 
 const STATUS_LABELS: Record<NewsletterSubscriberStatus, string> = {
   active: "Activ",
@@ -42,6 +43,36 @@ const STATUS_LABELS: Record<NewsletterSubscriberStatus, string> = {
   bounced: "Bounce",
   complaint: "Plângere",
   suppressed: "Suprimat",
+};
+
+const STATUS_VIEW_COPY: Record<
+  SubscriberStatusFilter,
+  { title: string; description: string }
+> = {
+  active: {
+    title: "Abonați activi",
+    description: "Abonați care primesc newsletterul.",
+  },
+  unsubscribed: {
+    title: "Dezabonați",
+    description:
+      "Adrese care s-au dezabonat; nu mai primesc trimiteri. Din motive GDPR, reactivarea nu se face din admin — utilizatorul se poate înscrie din nou doar din site, cu acord explicit.",
+  },
+  bounced: {
+    title: "Bounce",
+    description:
+      "Adrese marcate ca bounce după erori permanente de livrare. Dacă statusul a fost produs de o eroare SMTP de sistem, le poți reactiva manual.",
+  },
+  complaint: {
+    title: "Plângeri",
+    description:
+      "Adrese marcate cu reclamații de livrare. Nu primesc campanii până când statusul este schimbat.",
+  },
+  suppressed: {
+    title: "Suprimați",
+    description:
+      "Adrese blocate administrativ sau tehnic. Nu primesc campanii până când statusul este schimbat.",
+  },
 };
 
 async function readErrorMessage(response: Response, fallback: string) {
@@ -78,7 +109,8 @@ export default function SubscribersPage() {
   const [activeTab, setActiveTab] = useState<SubscribersTabValue>("list");
 
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"active" | "unsubscribed">("active");
+  const [statusFilter, setStatusFilter] =
+    useState<SubscriberStatusFilter>("active");
   const [sortBy, setSortBy] = useState("createdAt");
   const [sortDir, setSortDir] = useState("desc");
   const [pageSize, setPageSize] = useState(10);
@@ -287,6 +319,7 @@ export default function SubscribersPage() {
 
   const listSegmentTabTriggerClassName =
     "rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition data-[active=true]:bg-background data-[active=true]:text-foreground";
+  const selectedStatusView = STATUS_VIEW_COPY[statusFilter];
 
   function renderListSegment() {
     return (
@@ -320,15 +353,17 @@ export default function SubscribersPage() {
             <option value="desc">{adminCommonLabels.descending}</option>
             <option value="asc">{adminCommonLabels.ascending}</option>
           </select>
-          {statusFilter === "active" ?
+          {statusFilter !== "active" && statusFilter !== "unsubscribed" ?
+            <Button
+              variant="outline"
+              onClick={() => handleBulkStatus("active")}
+              disabled={loading || selectedIds.size === 0}
+            >
+              Setează activ
+            </Button>
+          : null}
+          {statusFilter !== "unsubscribed" ?
             <>
-              <Button
-                variant="outline"
-                onClick={() => handleBulkStatus("active")}
-                disabled={loading || selectedIds.size === 0}
-              >
-                Setează activ
-              </Button>
               <Button
                 variant="outline"
                 onClick={() => handleBulkStatus("unsubscribed")}
@@ -565,40 +600,32 @@ export default function SubscribersPage() {
           <Tabs
             value={statusFilter}
             onValueChange={(value) =>
-              setStatusFilter(value as "active" | "unsubscribed")
+              setStatusFilter(value as SubscriberStatusFilter)
             }
             className="space-y-4"
           >
             <Card>
               <CardHeader>
-                <CardTitle>
-                  {statusFilter === "active" ? "Abonați activi" : "Dezabonați"}
-                </CardTitle>
-                <CardDescription>
-                  {statusFilter === "active" ?
-                    "Abonați care primesc newsletterul."
-                  : "Adrese care s-au dezabonat; nu mai primesc trimiteri. Din motive GDPR, reactivarea nu se face din admin — utilizatorul se poate înscrie din nou doar din site, cu acord explicit."}
-                </CardDescription>
-                <TabList className="mt-4 inline-flex rounded-lg border border-border bg-muted/30 p-1">
-                  <TabTrigger
-                    value="active"
-                    className={listSegmentTabTriggerClassName}
-                  >
-                    Abonați activi
-                  </TabTrigger>
-                  <TabTrigger
-                    value="unsubscribed"
-                    className={listSegmentTabTriggerClassName}
-                  >
-                    Dezabonați
-                  </TabTrigger>
+                <CardTitle>{selectedStatusView.title}</CardTitle>
+                <CardDescription>{selectedStatusView.description}</CardDescription>
+                <TabList className="mt-4 flex flex-wrap rounded-lg border border-border bg-muted/30 p-1">
+                  {NEWSLETTER_SUBSCRIBER_STATUSES.map((statusValue) => (
+                    <TabTrigger
+                      key={statusValue}
+                      value={statusValue}
+                      className={listSegmentTabTriggerClassName}
+                    >
+                      {STATUS_LABELS[statusValue]}
+                    </TabTrigger>
+                  ))}
                 </TabList>
               </CardHeader>
               <CardContent>
-                <TabContent value="active" className="mt-0 outline-none">
-                  {renderListSegment()}
-                </TabContent>
-                <TabContent value="unsubscribed" className="mt-0 outline-none">
+                <TabContent
+                  key={statusFilter}
+                  value={statusFilter}
+                  className="mt-0 outline-none"
+                >
                   {renderListSegment()}
                 </TabContent>
               </CardContent>

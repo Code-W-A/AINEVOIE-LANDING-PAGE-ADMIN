@@ -653,7 +653,7 @@ export function getProviderApprovalSummary(
     missingItems,
     nextAction: requirementsMet
       ? "Poți apăsa Aprobă furnizor."
-      : "Completează elementele de mai sus înainte de aprobare.",
+      : "Furnizorul trebuie sa completeze urmatoarele.",
     technicalReasons,
   };
 }
