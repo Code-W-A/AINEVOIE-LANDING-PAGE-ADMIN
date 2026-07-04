@@ -1769,6 +1769,7 @@ export default function ProviderOnboardingFormWizard({
         </button>
         {currentStep < MAX_STEP ? (
           <button
+            key="provider-onboarding-next"
             type="button"
             onClick={goNextStep}
             disabled={nextDisabled}
@@ -1778,7 +1779,11 @@ export default function ProviderOnboardingFormWizard({
           </button>
         ) : (
           <button
-            type="submit"
+            key="provider-onboarding-submit"
+            type="button"
+            onClick={() => {
+              void handleSubmit(onSubmit)();
+            }}
             disabled={busy || !finalChecklistComplete}
             className="bg-primary hover:bg-primary/90 rounded-md px-5 py-2 text-sm font-medium text-white disabled:opacity-60"
           >
