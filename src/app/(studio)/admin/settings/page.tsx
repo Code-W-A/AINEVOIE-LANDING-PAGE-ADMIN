@@ -26,6 +26,11 @@ import {
   AppUpdateSettings,
   getDefaultAppUpdateSettings,
 } from "@/lib/appUpdateSettings";
+import {
+  ProviderServiceTypeItem,
+  ProviderServiceTypeSettings,
+  getDefaultProviderServiceTypeSettings,
+} from "@/lib/providerServiceTypes";
 import type { AppLocale } from "@/lib/apiLocale";
 
 const TOP_TABS = {
@@ -33,6 +38,7 @@ const TOP_TABS = {
   templates: "templates",
   platformFee: "platformFee",
   appUpdate: "appUpdate",
+  lists: "lists",
 } as const;
 
 type TopTab = (typeof TOP_TABS)[keyof typeof TOP_TABS];
@@ -60,6 +66,11 @@ type EmailTemplatesResponse = {
 type AppUpdateSettingsResponse = {
   item: AppUpdateSettings;
   defaults: AppUpdateSettings;
+};
+
+type ProviderServiceTypesResponse = {
+  item: ProviderServiceTypeSettings;
+  defaults: ProviderServiceTypeSettings;
 };
 
 const localeLabels: Record<AppUpdateLocale, string> = {
@@ -148,6 +159,18 @@ export default function SettingsPage() {
   const [appUpdateSaving, setAppUpdateSaving] = useState(false);
   const [appUpdateSaveError, setAppUpdateSaveError] = useState<string | null>(null);
   const [appUpdateSaveOk, setAppUpdateSaveOk] = useState(false);
+  const {
+    data: serviceTypesData,
+    loading: serviceTypesLoading,
+    error: serviceTypesError,
+    reload: reloadServiceTypes,
+  } = useAdminData<ProviderServiceTypesResponse>("/api/admin/provider-service-types");
+  const [serviceTypesState, setServiceTypesState] = useState<ProviderServiceTypeSettings>(
+    getDefaultProviderServiceTypeSettings()
+  );
+  const [serviceTypesSaving, setServiceTypesSaving] = useState(false);
+  const [serviceTypesSaveError, setServiceTypesSaveError] = useState<string | null>(null);
+  const [serviceTypesSaveOk, setServiceTypesSaveOk] = useState(false);
 
   useEffect(() => {
     if (templatesData?.item) {
@@ -168,6 +191,12 @@ export default function SettingsPage() {
       setAppUpdateState(appUpdateData.item);
     }
   }, [appUpdateData]);
+
+  useEffect(() => {
+    if (serviceTypesData?.item) {
+      setServiceTypesState(serviceTypesData.item);
+    }
+  }, [serviceTypesData]);
 
   function updateAppUpdateField<K extends keyof AppUpdateSettings>(
     field: K,
@@ -264,6 +293,73 @@ export default function SettingsPage() {
     }
   }
 
+  function updateServiceTypeItem(
+    index: number,
+    updater: (item: ProviderServiceTypeItem) => ProviderServiceTypeItem
+  ) {
+    setServiceTypesState((prev) => ({
+      items: prev.items.map((item, itemIndex) => (
+        itemIndex === index ? updater(item) : item
+      )),
+    }));
+    setServiceTypesSaveOk(false);
+  }
+
+  function addServiceTypeItem() {
+    setServiceTypesState((prev) => ({
+      items: [
+        ...prev.items,
+        {
+          value: "",
+          labels: { ro: "", en: "" },
+          enabled: true,
+          sortOrder: (prev.items.length + 1) * 10,
+        },
+      ],
+    }));
+    setServiceTypesSaveOk(false);
+  }
+
+  function deactivateServiceTypeItem(index: number) {
+    updateServiceTypeItem(index, (item) => ({ ...item, enabled: false }));
+  }
+
+  async function saveProviderServiceTypes() {
+    setServiceTypesSaving(true);
+    setServiceTypesSaveError(null);
+    try {
+      const res = await adminFetch("/api/admin/provider-service-types", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(serviceTypesState),
+      });
+
+      if (!res.ok) {
+        throw new Error(
+          await readAdminResponseError(
+            res,
+            "Nu am putut salva tipurile de servicii."
+          )
+        );
+      }
+
+      const json = await res.json();
+      if (json?.item) {
+        setServiceTypesState(json.item);
+      }
+      await reloadServiceTypes();
+      setServiceTypesSaveOk(true);
+    } catch (error) {
+      setServiceTypesSaveError(
+        error instanceof Error
+          ? error.message
+          : "Nu am putut salva tipurile de servicii."
+      );
+    } finally {
+      setServiceTypesSaving(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -298,6 +394,12 @@ export default function SettingsPage() {
             className={tabTriggerClass(topTab === TOP_TABS.appUpdate)}
           >
             Actualizare aplicație
+          </TabTrigger>
+          <TabTrigger
+            value={TOP_TABS.lists}
+            className={tabTriggerClass(topTab === TOP_TABS.lists)}
+          >
+            Liste
           </TabTrigger>
         </TabList>
 
@@ -818,6 +920,139 @@ export default function SettingsPage() {
               disabled={appUpdateSaving || appUpdateLoading}
             >
               {appUpdateSaving ? "Se salvează..." : "Salvează actualizarea"}
+            </Button>
+          </div>
+        </TabContent>
+
+        <TabContent value={TOP_TABS.lists} className="mt-6 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Tipuri servicii provider</CardTitle>
+              <CardDescription>
+                Lista folosită în onboarding-ul public și în aplicația mobilă.
+                Valoarea stabilă este salvată pe profilul prestatorului; pentru
+                eliminare, dezactivează itemul în loc să îl ștergi.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {serviceTypesError && (
+                <p className="text-sm text-rose-500">{serviceTypesError}</p>
+              )}
+              {serviceTypesLoading ? (
+                <AdminFormGridSkeleton fields={8} />
+              ) : (
+                <>
+                  <div className="grid gap-3">
+                    {serviceTypesState.items.map((item, index) => (
+                      <div
+                        key={`${item.value || "new"}-${index}`}
+                        className="grid gap-3 rounded-lg border border-border p-4 lg:grid-cols-[1.2fr_1fr_1fr_120px_100px_auto]"
+                      >
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Valoare stabilă</label>
+                          <Input
+                            placeholder="Curatenie rezidentiala"
+                            value={item.value}
+                            onChange={(event) =>
+                              updateServiceTypeItem(index, (current) => ({
+                                ...current,
+                                value: event.target.value,
+                              }))
+                            }
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Label RO</label>
+                          <Input
+                            placeholder="Curățenie rezidențială"
+                            value={item.labels.ro}
+                            onChange={(event) =>
+                              updateServiceTypeItem(index, (current) => ({
+                                ...current,
+                                labels: {
+                                  ...current.labels,
+                                  ro: event.target.value,
+                                },
+                              }))
+                            }
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Label EN</label>
+                          <Input
+                            placeholder="Residential cleaning"
+                            value={item.labels.en}
+                            onChange={(event) =>
+                              updateServiceTypeItem(index, (current) => ({
+                                ...current,
+                                labels: {
+                                  ...current.labels,
+                                  en: event.target.value,
+                                },
+                              }))
+                            }
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Sortare</label>
+                          <Input
+                            type="number"
+                            value={item.sortOrder}
+                            onChange={(event) =>
+                              updateServiceTypeItem(index, (current) => ({
+                                ...current,
+                                sortOrder: Number(event.target.value || 0),
+                              }))
+                            }
+                          />
+                        </div>
+                        <label className="flex items-center gap-2 self-end rounded-md border border-border px-3 py-2 text-sm">
+                          <input
+                            type="checkbox"
+                            className="size-4"
+                            checked={item.enabled}
+                            onChange={(event) =>
+                              updateServiceTypeItem(index, (current) => ({
+                                ...current,
+                                enabled: event.target.checked,
+                              }))
+                            }
+                          />
+                          Activ
+                        </label>
+                        <Button
+                          type="button"
+                          className="self-end"
+                          onClick={() => deactivateServiceTypeItem(index)}
+                          disabled={!item.enabled}
+                        >
+                          Dezactivează
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                  <Button type="button" onClick={addServiceTypeItem}>
+                    Adaugă tip serviciu
+                  </Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          <div className="flex items-center justify-end gap-3">
+            {serviceTypesSaveError && (
+              <p className="text-sm text-rose-500">{serviceTypesSaveError}</p>
+            )}
+            {serviceTypesSaveOk && !serviceTypesSaveError && (
+              <p className="text-sm text-emerald-600">
+                Tipurile de servicii au fost salvate.
+              </p>
+            )}
+            <Button
+              onClick={saveProviderServiceTypes}
+              disabled={serviceTypesSaving || serviceTypesLoading}
+            >
+              {serviceTypesSaving ? "Se salvează..." : "Salvează lista"}
             </Button>
           </div>
         </TabContent>

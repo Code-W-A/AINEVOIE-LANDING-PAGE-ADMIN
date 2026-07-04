@@ -5,7 +5,10 @@ import { InputGroup } from "@/components/ui/input-group";
 import { PROVIDER_ONBOARDING_MAX_STEP } from "@/constants/providerOnboarding";
 import { createSquareAvatarFile } from "@/lib/cropImage";
 import { getFirebaseAuth, getFirebaseFunctions, getFirebaseStorage } from "@/lib/firebaseClient";
-import { PROVIDER_SERVICE_ENTRIES } from "@/lib/providers";
+import {
+  getDefaultProviderServiceTypeItems,
+  type ProviderServiceTypeItem,
+} from "@/lib/providerServiceTypes";
 import {
   ROMANIA_COUNTIES,
   findRomaniaCity,
@@ -73,6 +76,7 @@ type EmailStatus = "idle" | "checking" | "available" | "exists" | "error";
 
 const MAX_STEP = PROVIDER_ONBOARDING_MAX_STEP;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const DEFAULT_PROVIDER_SERVICE_TYPES = getDefaultProviderServiceTypeItems();
 
 function emptyFileSlot(): FileSlot {
   return {
@@ -175,6 +179,11 @@ function isSlotReadyForSubmit(slot: FileSlot) {
   return slot.status === "uploaded" || Boolean(slot.file);
 }
 
+function getServiceTypeLabel(entry: Pick<ProviderServiceTypeItem, "value" | "labels">, locale: string) {
+  const normalizedLocale = locale === "en" ? "en" : "ro";
+  return entry.labels[normalizedLocale] || entry.labels.ro || entry.value;
+}
+
 export default function ProviderOnboardingFormWizard({
   currentStep,
   onStepChange,
@@ -202,6 +211,9 @@ export default function ProviderOnboardingFormWizard({
   const [professionalDocument, setProfessionalDocument] = useState<FileSlot>(() => emptyFileSlot());
   const [finalSubmitting, setFinalSubmitting] = useState(false);
   const [finalError, setFinalError] = useState<string | null>(null);
+  const [serviceTypeEntries, setServiceTypeEntries] = useState<ProviderServiceTypeItem[]>(
+    DEFAULT_PROVIDER_SERVICE_TYPES
+  );
   const cityComboRef = useRef<HTMLDivElement>(null);
   const citySearchInputRef = useRef<HTMLInputElement>(null);
   const avatarSourcePreviewUrlRef = useRef<string | null>(null);
@@ -241,7 +253,7 @@ export default function ProviderOnboardingFormWizard({
       launchContactConsent: false,
       countyCode: "",
       cityCode: "",
-      serviceType: PROVIDER_SERVICE_ENTRIES[0].value,
+      serviceType: DEFAULT_PROVIDER_SERVICE_TYPES[0]?.value || "",
       acceptTerms: false,
     },
   });
@@ -278,6 +290,53 @@ export default function ProviderOnboardingFormWizard({
       normalizeRomaniaLocationName(city.cityName).includes(normalizedCitySearch)
     );
   }, [availableCities, normalizedCitySearch]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadServiceTypes() {
+      try {
+        const response = await fetch("/api/provider-service-types", {
+          headers: { Accept: "application/json" },
+        });
+        if (!response.ok) {
+          throw new Error(`provider_service_types_${response.status}`);
+        }
+        const json = await response.json();
+        const items = Array.isArray(json?.item?.items) ? json.item.items : [];
+        const nextEntries = items
+          .map((item: Partial<ProviderServiceTypeItem>) => ({
+            value: String(item.value || "").trim(),
+            labels: {
+              ro: String(item.labels?.ro || item.value || "").trim(),
+              en: String(item.labels?.en || item.labels?.ro || item.value || "").trim(),
+            },
+            enabled: true,
+            sortOrder: Number(item.sortOrder) || 0,
+          }))
+          .filter((item: ProviderServiceTypeItem) => item.value);
+
+        if (!isActive || !nextEntries.length) {
+          return;
+        }
+
+        setServiceTypeEntries(nextEntries);
+        const currentServiceType = getValues("serviceType");
+        if (!nextEntries.some((entry: ProviderServiceTypeItem) => entry.value === currentServiceType)) {
+          setValue("serviceType", nextEntries[0].value, { shouldValidate: true });
+        }
+      } catch (error) {
+        logOnboardingClientError("service_types_load_failed", error);
+      }
+    }
+
+    void loadServiceTypes();
+
+    return () => {
+      isActive = false;
+    };
+  }, [getValues, setValue]);
+
   const busy = accountCreating || finalSubmitting;
   const emailCheckBlocksStep =
     currentStep === 1 &&
@@ -297,7 +356,7 @@ export default function ProviderOnboardingFormWizard({
     Boolean(selectedCountyCode) &&
     Boolean(selectedCityRecord) &&
     Boolean(
-      PROVIDER_SERVICE_ENTRIES.some((entry) => entry.value === selectedServiceType)
+      serviceTypeEntries.some((entry) => entry.value === selectedServiceType)
     );
   const legalComplete =
     Boolean(legalStatus) &&
@@ -1384,9 +1443,9 @@ export default function ProviderOnboardingFormWizard({
               className="border-stroke text-body focus:border-primary focus:shadow-input dark:border-stroke-dark dark:focus:border-primary w-full rounded-md border bg-white px-6 py-3 text-base font-medium outline-hidden disabled:opacity-60 dark:bg-black dark:text-white"
               {...register("serviceType", { required: t("serviceRequired") })}
             >
-              {PROVIDER_SERVICE_ENTRIES.map((entry) => (
+              {serviceTypeEntries.map((entry) => (
                 <option key={entry.value} value={entry.value}>
-                  {t(entry.messageKey)}
+                  {getServiceTypeLabel(entry, locale)}
                 </option>
               ))}
             </select>

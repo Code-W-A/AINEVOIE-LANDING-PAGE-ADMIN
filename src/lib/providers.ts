@@ -11,6 +11,7 @@ import {
   ROMANIA_URBAN_LOCALITIES,
   normalizeRomaniaLocationName,
 } from "@/lib/romaniaLocations";
+import { getDefaultProviderServiceTypeItems } from "@/lib/providerServiceTypes";
 
 export const providerStatusLabel: Record<ProviderStatusLike, string> = {
   pre_registered: "Preînregistrat",
@@ -92,14 +93,19 @@ export function getProviderLaunchContactConsentState(
   return "missing";
 }
 
-export const PROVIDER_SERVICE_ENTRIES = [
-  { value: "Curatenie rezidentiala", messageKey: "serviceResidential" },
-  { value: "Curatenie birouri", messageKey: "serviceOffices" },
-  { value: "Curatenie dupa renovare", messageKey: "servicePostRenovation" },
-  { value: "Curatenie canapele", messageKey: "serviceUpholstery" },
-  { value: "Curatenie geamuri", messageKey: "serviceWindows" },
-  { value: "Curatenie industriala", messageKey: "serviceIndustrial" },
-] as const;
+const PROVIDER_SERVICE_MESSAGE_KEYS: Record<string, string> = {
+  "Curatenie rezidentiala": "serviceResidential",
+  "Curatenie birouri": "serviceOffices",
+  "Curatenie dupa renovare": "servicePostRenovation",
+  "Curatenie canapele": "serviceUpholstery",
+  "Curatenie geamuri": "serviceWindows",
+  "Curatenie industriala": "serviceIndustrial",
+};
+
+export const PROVIDER_SERVICE_ENTRIES = getDefaultProviderServiceTypeItems().map((item) => ({
+  value: item.value,
+  messageKey: PROVIDER_SERVICE_MESSAGE_KEYS[item.value] || item.value,
+})) as Array<{ value: string; messageKey: string }>;
 
 /** Legacy compatibility: old admin filters and documents used city names only. */
 export const providerCityOptions = Array.from(

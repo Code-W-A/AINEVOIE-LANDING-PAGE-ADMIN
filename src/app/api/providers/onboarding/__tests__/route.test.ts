@@ -54,14 +54,25 @@ function firestoreWithProviderSnapshot(snapshot: QuerySnapshot) {
   const get = vi.fn().mockResolvedValue(snapshot);
   const limit = vi.fn(() => ({ get }));
   const where = vi.fn(() => ({ limit }));
-  const collection = vi.fn(() => ({ where }));
+  const settingsGet = vi.fn().mockResolvedValue({
+    exists: false,
+    data: () => null,
+  });
+  const settingsDoc = vi.fn(() => ({ get: settingsGet }));
+  const collection = vi.fn((name: string) => {
+    if (name === "admin_settings") {
+      return { doc: settingsDoc };
+    }
+
+    return { where };
+  });
   const db = { collection };
 
   mocks.getAdminDb.mockReturnValue(db);
   return { collection, get, limit, where };
 }
 
-function firestoreForSuccessfulSignup() {
+function firestoreForSuccessfulSignup(settingsData: Record<string, unknown> | null = null) {
   const providersGet = vi.fn().mockResolvedValue({
     docs: [],
     empty: true,
@@ -79,7 +90,16 @@ function firestoreForSuccessfulSignup() {
     doc: providerDoc,
     where: providersWhere,
   };
+  const settingsGet = vi.fn().mockResolvedValue({
+    exists: Boolean(settingsData),
+    data: () => settingsData,
+  });
+  const settingsDoc = vi.fn(() => ({ get: settingsGet }));
   const collection = vi.fn((name: string) => {
+    if (name === "admin_settings") {
+      return { doc: settingsDoc };
+    }
+
     if (name === "providers") {
       return providersCollection;
     }
@@ -198,6 +218,11 @@ describe("POST /api/providers/onboarding", () => {
   });
 
   it("returns 400 when provider service option is invalid", async () => {
+    firestoreWithProviderSnapshot({
+      docs: [],
+      empty: true,
+    });
+
     const response = await POST(
       request({
         ...validPayload,
@@ -209,7 +234,7 @@ describe("POST /api/providers/onboarding", () => {
     await expect(response.json()).resolves.toMatchObject({
       code: "INVALID_SERVICE",
     });
-    expect(mocks.getAdminDb).not.toHaveBeenCalled();
+    expect(mocks.getAdminDb).toHaveBeenCalled();
   });
 
   it("returns 409 when the provider email already exists", async () => {
@@ -345,5 +370,36 @@ describe("POST /api/providers/onboarding", () => {
       }),
     );
     expect(mocks.sendEmail).not.toHaveBeenCalled();
+  });
+
+  it("accepts provider service values from editable provider service settings", async () => {
+    const { providerSet } = firestoreForSuccessfulSignup({
+      items: [
+        {
+          value: "Instalatii",
+          labels: { ro: "Instalații", en: "Plumbing" },
+          enabled: true,
+          sortOrder: 10,
+        },
+      ],
+    });
+    const createUser = vi.fn().mockResolvedValue({ uid: "provider-uid" });
+    const setCustomUserClaims = vi.fn().mockResolvedValue(undefined);
+    mocks.getAdminAuth.mockReturnValue({ createUser, setCustomUserClaims });
+    mocks.sendEmail.mockResolvedValue(undefined);
+
+    const response = await POST(request({
+      ...validPayload,
+      serviceType: "Instalatii",
+    }));
+
+    expect(response.status).toBe(200);
+    expect(providerSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        professionalProfile: expect.objectContaining({
+          specialization: "Instalatii",
+        }),
+      }),
+    );
   });
 });

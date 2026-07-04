@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { FieldValue } from "firebase-admin/firestore";
+import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import { isValidPhoneNumber } from "libphonenumber-js";
 import { type AppLocale, getRequestLocale } from "@/lib/apiLocale";
 import { getApiErrorMessage } from "@/lib/apiMessages";
@@ -10,8 +10,14 @@ import {
   PROVIDER_PRIVACY_VERSION,
   PROVIDER_TERMS_VERSION,
   isProviderLegalStatus,
-  isProviderServiceOption,
 } from "@/lib/providers";
+import {
+  PROVIDER_SERVICE_TYPES_COLLECTION,
+  PROVIDER_SERVICE_TYPES_DOC,
+  getDefaultProviderServiceTypeSettings,
+  isProviderServiceTypeValue,
+  sanitizeProviderServiceTypeSettings,
+} from "@/lib/providerServiceTypes";
 import {
   findRomaniaCity,
   findRomaniaCounty,
@@ -87,6 +93,24 @@ function logProviderOnboardingApiError(error: unknown, details?: Record<string, 
     ...details,
     error: err,
   });
+}
+
+async function loadProviderServiceTypeSettings(db: Firestore) {
+  try {
+    const snapshot = await db
+      .collection(PROVIDER_SERVICE_TYPES_COLLECTION)
+      .doc(PROVIDER_SERVICE_TYPES_DOC)
+      .get();
+
+    return snapshot.exists
+      ? sanitizeProviderServiceTypeSettings(snapshot.data())
+      : getDefaultProviderServiceTypeSettings();
+  } catch (error) {
+    logProviderOnboardingApiError(error, {
+      stage: "provider_service_types",
+    });
+    return getDefaultProviderServiceTypeSettings();
+  }
 }
 
 export async function POST(request: Request) {
@@ -171,10 +195,6 @@ export async function POST(request: Request) {
     if (!selectedCounty || !selectedCity) {
       return jsonError(locale, "INVALID_CITY", 400);
     }
-    if (!isProviderServiceOption(serviceType)) {
-      return jsonError(locale, "INVALID_SERVICE", 400);
-    }
-
     if (!acceptTerms) {
       return jsonError(locale, "TERMS_NOT_ACCEPTED", 400);
     }
@@ -201,6 +221,11 @@ export async function POST(request: Request) {
     };
 
     const db = getAdminDb();
+    const providerServiceTypeSettings = await loadProviderServiceTypeSettings(db);
+
+    if (!isProviderServiceTypeValue(serviceType, providerServiceTypeSettings)) {
+      return jsonError(locale, "INVALID_SERVICE", 400);
+    }
 
     const existingProvider = await db
       .collection("providers")
