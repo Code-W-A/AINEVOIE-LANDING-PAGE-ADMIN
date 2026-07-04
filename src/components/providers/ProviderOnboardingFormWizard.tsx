@@ -25,7 +25,7 @@ import {
 } from "@/lib/romaniaLocations";
 import { PROVIDER_LEGAL_STATUSES, type ProviderLegalStatus } from "@/types/provider";
 import axios from "axios";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
 import { ref, uploadBytes } from "firebase/storage";
 import { ChevronDown, Eye, EyeOff, FileCheck2, ImagePlus, UploadCloud } from "lucide-react";
@@ -1030,6 +1030,14 @@ export default function ProviderOnboardingFormWizard({
       const welcomeEmailSent = await triggerWelcomeEmailSend();
       if (!welcomeEmailSent) {
         toast(t("welcomeEmailNotSent"), { duration: 6000 });
+      }
+      try {
+        await signOut(getFirebaseAuth());
+        logOnboardingClient("temporary provider web session signed out", { uid });
+      } catch (signOutError) {
+        logOnboardingClientError("temporary provider web session sign out failed", signOutError, {
+          uid,
+        });
       }
       logOnboardingClient("final submit completed");
       toast.success(t("toastSuccess"));
