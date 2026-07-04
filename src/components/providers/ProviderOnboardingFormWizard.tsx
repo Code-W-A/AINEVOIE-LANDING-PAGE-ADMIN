@@ -396,6 +396,17 @@ export default function ProviderOnboardingFormWizard({
     { key: "documents", label: t("finalDocuments"), complete: documentsComplete },
   ];
   const finalChecklistComplete = finalChecklist.every((item) => item.complete);
+  const firstIncompleteStep = !contactComplete
+    ? 1
+    : !servicesComplete
+      ? 2
+      : !legalComplete
+        ? 3
+        : !avatarComplete
+          ? 4
+          : !documentsComplete
+            ? 5
+            : MAX_STEP;
   const checkProviderEmailStatus = useCallback(
     async (email: string) => {
       const response = await axios.get<{ exists?: boolean; source?: "provider" | "auth" }>(
@@ -409,6 +420,32 @@ export default function ProviderOnboardingFormWizard({
     },
     [locale]
   );
+
+  useEffect(() => {
+    if (currentStep <= firstIncompleteStep) {
+      return;
+    }
+
+    logOnboardingClient("step access corrected", {
+      requestedStep: currentStep,
+      redirectedStep: firstIncompleteStep,
+      contactComplete,
+      servicesComplete,
+      legalComplete,
+      avatarComplete,
+      documentsComplete,
+    });
+    onStepChange(firstIncompleteStep);
+  }, [
+    avatarComplete,
+    contactComplete,
+    currentStep,
+    documentsComplete,
+    firstIncompleteStep,
+    legalComplete,
+    onStepChange,
+    servicesComplete,
+  ]);
 
   useEffect(() => {
     setValue("cityCode", "", { shouldValidate: false });
