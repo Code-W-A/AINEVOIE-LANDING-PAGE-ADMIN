@@ -1,6 +1,14 @@
 "use client";
 
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { InputGroup } from "@/components/ui/input-group";
 import { PROVIDER_ONBOARDING_MAX_STEP } from "@/constants/providerOnboarding";
 import { createSquareAvatarFile } from "@/lib/cropImage";
@@ -71,6 +79,11 @@ type AvatarSource = {
   file: File;
   previewUrl: string;
   error: string | null;
+};
+type DocumentPreviewState = {
+  open: boolean;
+  title: string;
+  previewUrl: string | null;
 };
 type EmailStatus = "idle" | "checking" | "available" | "exists" | "error";
 
@@ -209,6 +222,11 @@ export default function ProviderOnboardingFormWizard({
   const [avatar, setAvatar] = useState<FileSlot>(() => emptyFileSlot());
   const [identityDocument, setIdentityDocument] = useState<FileSlot>(() => emptyFileSlot());
   const [professionalDocument, setProfessionalDocument] = useState<FileSlot>(() => emptyFileSlot());
+  const [documentPreview, setDocumentPreview] = useState<DocumentPreviewState>({
+    open: false,
+    title: "",
+    previewUrl: null,
+  });
   const [finalSubmitting, setFinalSubmitting] = useState(false);
   const [finalError, setFinalError] = useState<string | null>(null);
   const [serviceTypeEntries, setServiceTypeEntries] = useState<ProviderServiceTypeItem[]>(
@@ -1012,17 +1030,6 @@ export default function ProviderOnboardingFormWizard({
           </div>
         </div>
 
-        {slot.previewUrl && (
-          <Image
-            src={slot.previewUrl}
-            alt=""
-            width={720}
-            height={320}
-            unoptimized
-            className="mb-3 h-40 w-full rounded-lg object-cover"
-          />
-        )}
-
         <input
           type="file"
           accept="image/*"
@@ -1042,6 +1049,23 @@ export default function ProviderOnboardingFormWizard({
                 ? t("uploadStatusReady")
                 : t("uploadStatusEmpty")}
         </p>
+        {slot.previewUrl ? (
+          <div className="mt-3">
+            <button
+              type="button"
+              onClick={() =>
+                setDocumentPreview({
+                  open: true,
+                  title,
+                  previewUrl: slot.previewUrl,
+                })
+              }
+              className="text-primary text-sm font-medium hover:underline"
+            >
+              {t("viewDocument")}
+            </button>
+          </div>
+        ) : null}
         {slot.error && <p className="mt-2 text-xs text-red-500">{slot.error}</p>}
       </div>
     );
@@ -1725,6 +1749,50 @@ export default function ProviderOnboardingFormWizard({
           </button>
         )}
       </div>
+      <Dialog
+        open={documentPreview.open}
+        onOpenChange={(open) =>
+          setDocumentPreview((previous) => ({
+            ...previous,
+            open,
+          }))
+        }
+      >
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>{documentPreview.title || t("documentPreviewTitle")}</DialogTitle>
+            <DialogDescription>{t("documentPreviewDescription")}</DialogDescription>
+          </DialogHeader>
+          <div className="flex min-h-[320px] items-center justify-center rounded-md border border-border bg-muted/30 p-3">
+            {documentPreview.previewUrl ? (
+              <Image
+                src={documentPreview.previewUrl}
+                alt={documentPreview.title || t("documentPreviewTitle")}
+                width={1200}
+                height={900}
+                unoptimized
+                className="max-h-[70vh] max-w-full rounded-sm object-contain"
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">{t("uploadRequired")}</p>
+            )}
+          </div>
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() =>
+                setDocumentPreview((previous) => ({
+                  ...previous,
+                  open: false,
+                }))
+              }
+              className="border-stroke dark:border-stroke-dark hover:border-primary rounded-md border px-5 py-2 text-sm font-medium"
+            >
+              {t("closePreview")}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </form>
   );
 }
