@@ -31,9 +31,11 @@ import {
 } from "@/lib/providerServiceTypes";
 import {
   type ConfigListStatusFilter,
+  type ProviderServiceTypeDraft,
   countActiveProviderServiceTypeItems,
   createEmptyProviderServiceTypeItem,
   filterProviderServiceTypeItems,
+  getProviderServiceTypeDuplicateWarnings,
   upsertProviderServiceTypeItem,
 } from "@/lib/adminConfigLists";
 
@@ -45,7 +47,7 @@ type ProviderServiceTypesResponse = {
 type ServiceTypeEditorState = {
   mode: "list" | "edit";
   index: number | null;
-  draft: ProviderServiceTypeItem;
+  draft: ProviderServiceTypeDraft;
 };
 
 type ConfigListRegistryEntry = {
@@ -131,6 +133,14 @@ export function AdminConfigListsPanel() {
   const draftActiveCount = useMemo(
     () => countActiveProviderServiceTypeItems(draftState),
     [draftState]
+  );
+  const duplicateWarnings = useMemo(
+    () => getProviderServiceTypeDuplicateWarnings(
+      draftState.items,
+      editorState.draft,
+      editorState.index
+    ),
+    [draftState.items, editorState.draft, editorState.index]
   );
   const hasUnsavedChanges = useMemo(
     () => JSON.stringify(draftState) !== JSON.stringify(savedState),
@@ -453,21 +463,20 @@ export function AdminConfigListsPanel() {
                       : "Editează tip serviciu"}
                   </h3>
                   <p className="text-sm text-muted-foreground">
-                    Editează valoarea stabilă și textele afișate în UI.
+                    Editează textele afișate în UI; cheia internă este generată
+                    automat la creare și rămâne stabilă după salvare.
                   </p>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2 sm:col-span-2">
-                    <label className="text-sm font-medium">Valoare stabilă</label>
-                    <Input
-                      placeholder="Curatenie rezidentiala"
-                      value={editorState.draft.value}
-                      onChange={(event) =>
-                        updateDraftItem("value", event.target.value)
-                      }
-                    />
-                  </div>
+                  {editorState.index !== null && editorState.draft.value ? (
+                    <div className="space-y-2 sm:col-span-2">
+                      <label className="text-sm font-medium">Cheie internă</label>
+                      <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                        {editorState.draft.value}
+                      </div>
+                    </div>
+                  ) : null}
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Label RO</label>
                     <Input
@@ -477,6 +486,11 @@ export function AdminConfigListsPanel() {
                         updateDraftLabel("ro", event.target.value)
                       }
                     />
+                    {duplicateWarnings.ro ? (
+                      <p className="text-xs text-amber-700">
+                        Există deja un alt item cu același Label RO.
+                      </p>
+                    ) : null}
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Label EN</label>
@@ -487,6 +501,11 @@ export function AdminConfigListsPanel() {
                         updateDraftLabel("en", event.target.value)
                       }
                     />
+                    {duplicateWarnings.en ? (
+                      <p className="text-xs text-amber-700">
+                        Există deja un alt item cu același Label EN.
+                      </p>
+                    ) : null}
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Sortare</label>

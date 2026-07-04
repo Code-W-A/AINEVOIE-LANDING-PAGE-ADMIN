@@ -4,6 +4,7 @@ import {
   countActiveProviderServiceTypeItems,
   createEmptyProviderServiceTypeItem,
   filterProviderServiceTypeItems,
+  getProviderServiceTypeDuplicateWarnings,
   upsertProviderServiceTypeItem,
 } from "../adminConfigLists";
 
@@ -53,7 +54,6 @@ describe("adminConfigLists", () => {
       settings,
       {
         ...empty,
-        value: " Instalatii ",
         labels: { ro: " Instalații ", en: " Plumbing " },
       },
       null
@@ -78,5 +78,35 @@ describe("adminConfigLists", () => {
 
     expect(updated.items[0].labels.ro).toBe("Curățenie office");
     expect(settings.items[0].labels.ro).toBe("Curățenie birouri");
+  });
+
+  it("keeps the existing value when editing an existing item", () => {
+    const updated = upsertProviderServiceTypeItem(
+      settings,
+      {
+        ...settings.items[0],
+        labels: { ...settings.items[0].labels, ro: "Curățenie nouă" },
+      },
+      0
+    );
+
+    expect(updated.items[0].value).toBe("Curatenie birouri");
+  });
+
+  it("detects duplicate labels for editor warnings", () => {
+    const warnings = getProviderServiceTypeDuplicateWarnings(
+      settings.items,
+      {
+        labels: { ro: "curățenie birouri", en: "legacy service" },
+        enabled: true,
+        sortOrder: 30,
+      },
+      null
+    );
+
+    expect(warnings).toEqual({
+      ro: true,
+      en: true,
+    });
   });
 });

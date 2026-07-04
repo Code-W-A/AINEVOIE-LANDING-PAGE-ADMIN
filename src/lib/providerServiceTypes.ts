@@ -20,8 +20,66 @@ function readString(value: unknown, maxLength = 120) {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
 }
 
-function normalizeOption(value: string) {
+export function normalizeProviderServiceTypeOption(value: string) {
   return value.trim().toLowerCase();
+}
+
+function normalizeOption(value: string) {
+  return normalizeProviderServiceTypeOption(value);
+}
+
+function removeDiacritics(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function toTitleCaseWords(value: string) {
+  return value
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+export function generateProviderServiceTypeValueFromLabel(labelRo: string) {
+  const normalized = removeDiacritics(readString(labelRo, 120))
+    .replace(/[^a-zA-Z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+
+  if (!normalized) {
+    return "";
+  }
+
+  return toTitleCaseWords(normalized);
+}
+
+export function makeUniqueProviderServiceTypeValue(
+  baseValue: string,
+  existingValues: string[],
+  currentValue = ""
+) {
+  const normalizedCurrentValue = normalizeOption(currentValue);
+  const taken = new Set(
+    existingValues
+      .map((value) => normalizeOption(value))
+      .filter((value) => value && value !== normalizedCurrentValue)
+  );
+  const initialValue = readString(baseValue, 120);
+
+  if (!initialValue) {
+    return "";
+  }
+
+  if (!taken.has(normalizeOption(initialValue))) {
+    return initialValue;
+  }
+
+  let suffix = 2;
+  while (taken.has(normalizeOption(`${initialValue} ${suffix}`))) {
+    suffix += 1;
+  }
+
+  return `${initialValue} ${suffix}`;
 }
 
 export function getDefaultProviderServiceTypeItems(): ProviderServiceTypeItem[] {

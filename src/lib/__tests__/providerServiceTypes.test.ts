@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  generateProviderServiceTypeValueFromLabel,
   getDefaultProviderServiceTypeItems,
   getPublicProviderServiceTypes,
   isProviderServiceTypeValue,
+  makeUniqueProviderServiceTypeValue,
   resolveProviderServiceTypeValue,
   sanitizeProviderServiceTypeSettings,
   validateProviderServiceTypeSettings,
@@ -86,5 +88,20 @@ describe("providerServiceTypes", () => {
     });
 
     expect(validateProviderServiceTypeSettings(settings)).toBe("Păstrează cel puțin un tip de serviciu activ.");
+  });
+
+  it("generates stable values from Romanian labels", () => {
+    expect(generateProviderServiceTypeValueFromLabel("Curățenie rezidențială")).toBe(
+      "Curatenie Rezidentiala"
+    );
+  });
+
+  it("makes auto-generated values unique with numeric suffixes", () => {
+    expect(
+      makeUniqueProviderServiceTypeValue("Curatenie Rezidentiala", [
+        "Curatenie Rezidentiala",
+        "Curatenie Rezidentiala 2",
+      ])
+    ).toBe("Curatenie Rezidentiala 3");
   });
 });
