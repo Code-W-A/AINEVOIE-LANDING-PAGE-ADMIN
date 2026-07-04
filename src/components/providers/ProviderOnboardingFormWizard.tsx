@@ -25,7 +25,12 @@ import {
 } from "@/lib/romaniaLocations";
 import { PROVIDER_LEGAL_STATUSES, type ProviderLegalStatus } from "@/types/provider";
 import axios from "axios";
-import { signInWithEmailAndPassword, signOut } from "firebase/auth";
+import {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signOut,
+  type User,
+} from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
 import { ref, uploadBytes } from "firebase/storage";
 import { ChevronDown, Eye, EyeOff, FileCheck2, ImagePlus, UploadCloud } from "lucide-react";
@@ -131,6 +136,51 @@ function readCallableError(error: unknown, fallback: string) {
     return code ? `${err.message} (${code})` : err.message;
   }
   return fallback;
+}
+
+function readAxiosErrorCode(error: unknown) {
+  const err = error as { response?: { data?: { code?: unknown } } };
+  return typeof err.response?.data?.code === "string" ? err.response.data.code : null;
+}
+
+async function waitForProviderAuthUser(expectedUid?: string | null): Promise<User> {
+  const auth = getFirebaseAuth();
+  const currentUser = auth.currentUser;
+  if (currentUser && (!expectedUid || currentUser.uid === expectedUid)) {
+    await currentUser.getIdToken(true);
+    return currentUser;
+  }
+
+  return new Promise((resolve, reject) => {
+    let unsubscribe: () => void = () => {};
+    const timeoutId = window.setTimeout(() => {
+      unsubscribe();
+      reject(new Error("provider_auth_session_timeout"));
+    }, 8000);
+
+    unsubscribe = onAuthStateChanged(
+      auth,
+      async (user) => {
+        if (!user || (expectedUid && user.uid !== expectedUid)) {
+          return;
+        }
+
+        window.clearTimeout(timeoutId);
+        unsubscribe();
+        try {
+          await user.getIdToken(true);
+          resolve(user);
+        } catch (error) {
+          reject(error);
+        }
+      },
+      (error) => {
+        window.clearTimeout(timeoutId);
+        unsubscribe();
+        reject(error);
+      }
+    );
+  });
 }
 
 function revokeTrackedPreviewUrl(ref: React.MutableRefObject<string | null>) {
@@ -655,10 +705,15 @@ export default function ProviderOnboardingFormWizard({
       );
 
       const uid = typeof res.data?.uid === "string" ? res.data.uid : null;
-      await signInWithEmailAndPassword(getFirebaseAuth(), values.email.trim(), values.password);
-      setProviderUid(uid || getFirebaseAuth().currentUser?.uid || null);
+      const credentials = await signInWithEmailAndPassword(
+        getFirebaseAuth(),
+        values.email.trim(),
+        values.password
+      );
+      const authenticatedUser = await waitForProviderAuthUser(uid || credentials.user.uid);
+      setProviderUid(authenticatedUser.uid);
       logOnboardingClient("account create request completed", {
-        uid: uid || getFirebaseAuth().currentUser?.uid || null,
+        uid: authenticatedUser.uid,
         welcomeEmailSent: res.data?.welcomeEmailSent === true,
         newsletterStatusAtSignup: res.data?.newsletterStatusAtSignup || null,
       });
@@ -670,10 +725,33 @@ export default function ProviderOnboardingFormWizard({
       }
       return true;
     } catch (error: unknown) {
+      const code = readAxiosErrorCode(error);
+      if (code === "PROVIDER_EMAIL_EXISTS" || code === "AUTH_EMAIL_EXISTS") {
+        try {
+          const credentials = await signInWithEmailAndPassword(
+            getFirebaseAuth(),
+            values.email.trim(),
+            values.password
+          );
+          const authenticatedUser = await waitForProviderAuthUser(credentials.user.uid);
+          setProviderUid(authenticatedUser.uid);
+          logOnboardingClient("existing provider session recovered", {
+            uid: authenticatedUser.uid,
+            code,
+          });
+          return true;
+        } catch (signInError) {
+          logOnboardingClientError("existing provider session recovery failed", signInError, {
+            code,
+            emailDomain: values.email.includes("@")
+              ? values.email.split("@").pop()?.toLowerCase()
+              : null,
+          });
+        }
+      }
       logOnboardingClientError("account create request failed", error, {
         status: (error as { response?: { status?: number } }).response?.status || null,
-        code:
-          (error as { response?: { data?: { code?: string } } }).response?.data?.code || null,
+        code,
       });
       const ax = error as {
         response?: { data?: { error?: string; code?: string } };
@@ -983,6 +1061,10 @@ export default function ProviderOnboardingFormWizard({
         const created = await createProviderAccount({ showToast: false });
         if (!created) return;
       }
+      const activeProviderUser = await waitForProviderAuthUser(
+        providerUid || getFirebaseAuth().currentUser?.uid || null
+      );
+      setProviderUid(activeProviderUser.uid);
       if (!isSlotReadyForSubmit(avatar)) throw new Error(t("avatarRequired"));
       if (
         !isSlotReadyForSubmit(identityDocument) ||
@@ -992,6 +1074,7 @@ export default function ProviderOnboardingFormWizard({
       }
 
       logOnboardingClient("final uploads started", {
+        uid: activeProviderUser.uid,
         avatarStatus: avatar.status,
         identityDocumentStatus: identityDocument.status,
         professionalDocumentStatus: professionalDocument.status,
