@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Pencil, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -11,19 +10,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabList, TabTrigger, TabContent } from "@/components/ui/tabs";
 import { useAdminData } from "@/components/admin/useAdminData";
 import { adminFetch, readAdminResponseError } from "@/components/admin/adminApi";
 import { AdminFormGridSkeleton } from "@/components/admin/AdminSkeletonLayouts";
+import { AdminConfigListsPanel } from "@/components/admin/AdminConfigListsPanel";
 import { EmailTemplateEditor } from "@/components/admin/EmailTemplateEditor";
 import {
   EmailTemplateConfig,
@@ -35,11 +27,6 @@ import {
   AppUpdateSettings,
   getDefaultAppUpdateSettings,
 } from "@/lib/appUpdateSettings";
-import {
-  ProviderServiceTypeItem,
-  ProviderServiceTypeSettings,
-  getDefaultProviderServiceTypeSettings,
-} from "@/lib/providerServiceTypes";
 import type { AppLocale } from "@/lib/apiLocale";
 
 const TOP_TABS = {
@@ -77,30 +64,10 @@ type AppUpdateSettingsResponse = {
   defaults: AppUpdateSettings;
 };
 
-type ProviderServiceTypesResponse = {
-  item: ProviderServiceTypeSettings;
-  defaults: ProviderServiceTypeSettings;
-};
-
-type ServiceTypeDialogState = {
-  open: boolean;
-  index: number | null;
-  draft: ProviderServiceTypeItem;
-};
-
 const localeLabels: Record<AppUpdateLocale, string> = {
   ro: "Română",
   en: "English",
 };
-
-function createEmptyServiceTypeItem(sortOrder: number): ProviderServiceTypeItem {
-  return {
-    value: "",
-    labels: { ro: "", en: "" },
-    enabled: true,
-    sortOrder,
-  };
-}
 
 export default function SettingsPage() {
   const {
@@ -183,23 +150,6 @@ export default function SettingsPage() {
   const [appUpdateSaving, setAppUpdateSaving] = useState(false);
   const [appUpdateSaveError, setAppUpdateSaveError] = useState<string | null>(null);
   const [appUpdateSaveOk, setAppUpdateSaveOk] = useState(false);
-  const {
-    data: serviceTypesData,
-    loading: serviceTypesLoading,
-    error: serviceTypesError,
-    reload: reloadServiceTypes,
-  } = useAdminData<ProviderServiceTypesResponse>("/api/admin/provider-service-types");
-  const [serviceTypesState, setServiceTypesState] = useState<ProviderServiceTypeSettings>(
-    getDefaultProviderServiceTypeSettings()
-  );
-  const [serviceTypesSaving, setServiceTypesSaving] = useState(false);
-  const [serviceTypesSaveError, setServiceTypesSaveError] = useState<string | null>(null);
-  const [serviceTypesSaveOk, setServiceTypesSaveOk] = useState(false);
-  const [serviceTypeDialog, setServiceTypeDialog] = useState<ServiceTypeDialogState>({
-    open: false,
-    index: null,
-    draft: createEmptyServiceTypeItem(10),
-  });
 
   useEffect(() => {
     if (templatesData?.item) {
@@ -220,12 +170,6 @@ export default function SettingsPage() {
       setAppUpdateState(appUpdateData.item);
     }
   }, [appUpdateData]);
-
-  useEffect(() => {
-    if (serviceTypesData?.item) {
-      setServiceTypesState(serviceTypesData.item);
-    }
-  }, [serviceTypesData]);
 
   function updateAppUpdateField<K extends keyof AppUpdateSettings>(
     field: K,
@@ -319,150 +263,6 @@ export default function SettingsPage() {
       );
     } finally {
       setAppUpdateSaving(false);
-    }
-  }
-
-  function updateServiceTypeItem(
-    index: number,
-    updater: (item: ProviderServiceTypeItem) => ProviderServiceTypeItem
-  ) {
-    setServiceTypesState((prev) => ({
-      items: prev.items.map((item, itemIndex) => (
-        itemIndex === index ? updater(item) : item
-      )),
-    }));
-    setServiceTypesSaveOk(false);
-  }
-
-  function updateServiceTypeDialogField(
-    field: keyof Pick<ProviderServiceTypeItem, "value" | "enabled" | "sortOrder">,
-    value: string | number | boolean
-  ) {
-    setServiceTypeDialog((prev) => ({
-      ...prev,
-      draft: {
-        ...prev.draft,
-        [field]: value,
-      },
-    }));
-  }
-
-  function updateServiceTypeDialogLabel(
-    locale: keyof ProviderServiceTypeItem["labels"],
-    value: string
-  ) {
-    setServiceTypeDialog((prev) => ({
-      ...prev,
-      draft: {
-        ...prev.draft,
-        labels: {
-          ...prev.draft.labels,
-          [locale]: value,
-        },
-      },
-    }));
-  }
-
-  function openAddServiceTypeDialog() {
-    setServiceTypeDialog({
-      open: true,
-      index: null,
-      draft: createEmptyServiceTypeItem((serviceTypesState.items.length + 1) * 10),
-    });
-  }
-
-  function openEditServiceTypeDialog(index: number) {
-    const currentItem = serviceTypesState.items[index];
-
-    if (!currentItem) {
-      return;
-    }
-
-    setServiceTypeDialog({
-      open: true,
-      index,
-      draft: {
-        ...currentItem,
-        labels: { ...currentItem.labels },
-      },
-    });
-  }
-
-  function closeServiceTypeDialog(nextOpen: boolean) {
-    setServiceTypeDialog((prev) => ({
-      ...prev,
-      open: nextOpen,
-    }));
-  }
-
-  function saveServiceTypeDialog() {
-    const nextItem = {
-      ...serviceTypeDialog.draft,
-      value: serviceTypeDialog.draft.value.trim(),
-      labels: {
-        ro: serviceTypeDialog.draft.labels.ro.trim(),
-        en: serviceTypeDialog.draft.labels.en.trim(),
-      },
-      sortOrder: Number(serviceTypeDialog.draft.sortOrder || 0),
-    };
-
-    setServiceTypesState((prev) => {
-      if (serviceTypeDialog.index === null) {
-        return {
-          items: [...prev.items, nextItem],
-        };
-      }
-
-      return {
-        items: prev.items.map((item, index) => (
-          index === serviceTypeDialog.index ? nextItem : item
-        )),
-      };
-    });
-    setServiceTypesSaveOk(false);
-    setServiceTypeDialog((prev) => ({
-      ...prev,
-      open: false,
-    }));
-  }
-
-  function deactivateServiceTypeItem(index: number) {
-    updateServiceTypeItem(index, (item) => ({ ...item, enabled: false }));
-  }
-
-  async function saveProviderServiceTypes() {
-    setServiceTypesSaving(true);
-    setServiceTypesSaveError(null);
-    try {
-      const res = await adminFetch("/api/admin/provider-service-types", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(serviceTypesState),
-      });
-
-      if (!res.ok) {
-        throw new Error(
-          await readAdminResponseError(
-            res,
-            "Nu am putut salva tipurile de servicii."
-          )
-        );
-      }
-
-      const json = await res.json();
-      if (json?.item) {
-        setServiceTypesState(json.item);
-      }
-      await reloadServiceTypes();
-      setServiceTypesSaveOk(true);
-    } catch (error) {
-      setServiceTypesSaveError(
-        error instanceof Error
-          ? error.message
-          : "Nu am putut salva tipurile de servicii."
-      );
-    } finally {
-      setServiceTypesSaving(false);
     }
   }
 
@@ -1031,190 +831,7 @@ export default function SettingsPage() {
         </TabContent>
 
         <TabContent value={TOP_TABS.lists} className="mt-6 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Tipuri servicii provider</CardTitle>
-              <CardDescription>
-                Lista folosită în onboarding-ul public și în aplicația mobilă.
-                Valoarea stabilă este salvată pe profilul prestatorului; pentru
-                eliminare, dezactivează itemul în loc să îl ștergi.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {serviceTypesError && (
-                <p className="text-sm text-rose-500">{serviceTypesError}</p>
-              )}
-              {serviceTypesLoading ? (
-                <AdminFormGridSkeleton fields={8} />
-              ) : (
-                <>
-                  <div className="overflow-hidden rounded-lg border border-border">
-                    {serviceTypesState.items.map((item, index) => (
-                      <div
-                        key={`${item.value || "new"}-${index}`}
-                        className="grid gap-3 border-b border-border px-4 py-3 last:border-b-0 md:grid-cols-[minmax(0,1.6fr)_120px_110px_auto] md:items-center"
-                      >
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-sm font-medium text-foreground">
-                              {item.labels.ro || item.value || "Tip serviciu nou"}
-                            </p>
-                            <span
-                              className={
-                                item.enabled
-                                  ? "rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700"
-                                  : "rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"
-                              }
-                            >
-                              {item.enabled ? "Activ" : "Inactiv"}
-                            </span>
-                          </div>
-                          <p className="truncate text-xs text-muted-foreground">
-                            {item.value || "Fără valoare stabilă"} · EN: {item.labels.en || "—"}
-                          </p>
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          Sortare {item.sortOrder}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {item.enabled ? "Vizibil la selecție" : "Ascuns la selecție"}
-                        </div>
-                        <div className="flex items-center justify-start gap-2 md:justify-end">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openEditServiceTypeDialog(index)}
-                          >
-                            <Pencil className="size-4" />
-                            Editează
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => deactivateServiceTypeItem(index)}
-                            disabled={!item.enabled}
-                          >
-                            Dezactivează
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <Button type="button" variant="outline" onClick={openAddServiceTypeDialog}>
-                    <Plus className="size-4" />
-                    Adaugă tip serviciu
-                  </Button>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          <div className="flex items-center justify-end gap-3">
-            {serviceTypesSaveError && (
-              <p className="text-sm text-rose-500">{serviceTypesSaveError}</p>
-            )}
-            {serviceTypesSaveOk && !serviceTypesSaveError && (
-              <p className="text-sm text-emerald-600">
-                Tipurile de servicii au fost salvate.
-              </p>
-            )}
-            <Button
-              onClick={saveProviderServiceTypes}
-              disabled={serviceTypesSaving || serviceTypesLoading}
-            >
-              {serviceTypesSaving ? "Se salvează..." : "Salvează lista"}
-            </Button>
-          </div>
-
-          <Dialog
-            open={serviceTypeDialog.open}
-            onOpenChange={closeServiceTypeDialog}
-          >
-            <DialogContent className="sm:max-w-xl">
-              <DialogHeader>
-                <DialogTitle>
-                  {serviceTypeDialog.index === null
-                    ? "Adaugă tip serviciu"
-                    : "Editează tip serviciu"}
-                </DialogTitle>
-                <DialogDescription>
-                  Valoarea stabilă rămâne cheia salvată pe profilul providerului.
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="grid gap-4 py-2 sm:grid-cols-2">
-                <div className="space-y-2 sm:col-span-2">
-                  <label className="text-sm font-medium">Valoare stabilă</label>
-                  <Input
-                    placeholder="Curatenie rezidentiala"
-                    value={serviceTypeDialog.draft.value}
-                    onChange={(event) =>
-                      updateServiceTypeDialogField("value", event.target.value)
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Label RO</label>
-                  <Input
-                    placeholder="Curățenie rezidențială"
-                    value={serviceTypeDialog.draft.labels.ro}
-                    onChange={(event) =>
-                      updateServiceTypeDialogLabel("ro", event.target.value)
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Label EN</label>
-                  <Input
-                    placeholder="Residential cleaning"
-                    value={serviceTypeDialog.draft.labels.en}
-                    onChange={(event) =>
-                      updateServiceTypeDialogLabel("en", event.target.value)
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Sortare</label>
-                  <Input
-                    type="number"
-                    value={serviceTypeDialog.draft.sortOrder}
-                    onChange={(event) =>
-                      updateServiceTypeDialogField(
-                        "sortOrder",
-                        Number(event.target.value || 0)
-                      )
-                    }
-                  />
-                </div>
-                <label className="flex items-center gap-2 self-end rounded-md border border-border px-3 py-2 text-sm">
-                  <input
-                    type="checkbox"
-                    className="size-4"
-                    checked={serviceTypeDialog.draft.enabled}
-                    onChange={(event) =>
-                      updateServiceTypeDialogField("enabled", event.target.checked)
-                    }
-                  />
-                  Activ
-                </label>
-              </div>
-
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => closeServiceTypeDialog(false)}
-                >
-                  Anulează
-                </Button>
-                <Button type="button" onClick={saveServiceTypeDialog}>
-                  {serviceTypeDialog.index === null ? "Adaugă" : "Salvează"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <AdminConfigListsPanel />
         </TabContent>
       </Tabs>
     </div>
