@@ -344,7 +344,7 @@ export function shouldShowPublicSyncBanner(status: string, hasDrift: boolean) {
   if (!hasDrift) {
     return false;
   }
-  return ["approved", "pending_review", "in_review"].includes(readString(status));
+  return readString(status) === "approved";
 }
 
 export function canViewProviderDocument(doc?: ProviderDocumentFile | null) {
@@ -694,6 +694,13 @@ export function getPublicPreviewDrift(
   services: Array<Record<string, unknown>> | undefined,
   availability: Record<string, unknown> | null | undefined
 ) {
+  if (readString(provider.status) !== "approved" && !providerDirectory) {
+    return {
+      hasDrift: false,
+      issues: [],
+    };
+  }
+
   if (!providerDirectory) {
     return {
       hasDrift: true,

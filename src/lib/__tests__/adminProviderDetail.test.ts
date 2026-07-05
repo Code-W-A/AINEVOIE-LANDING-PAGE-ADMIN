@@ -4,6 +4,7 @@ import {
   formatAvailabilityDayLine,
   getApprovalBlockedReasons,
   getProviderApprovalSummary,
+  getPublicPreviewDrift,
   getSimplifiedStatusLabel,
   getVerificationIssueCount,
   humanizeApprovalReason,
@@ -115,8 +116,28 @@ describe("adminProviderDetail helpers", () => {
 
   it("shows public sync banner only for relevant statuses", () => {
     expect(shouldShowPublicSyncBanner("approved", true)).toBe(true);
-    expect(shouldShowPublicSyncBanner("pending_review", true)).toBe(true);
+    expect(shouldShowPublicSyncBanner("pending_review", true)).toBe(false);
     expect(shouldShowPublicSyncBanner("rejected", true)).toBe(false);
     expect(shouldShowPublicSyncBanner("approved", false)).toBe(false);
+  });
+
+  it("does not report public sync drift for non-approved providers without public profile", () => {
+    expect(
+      getPublicPreviewDrift(
+        {
+          status: "pending_review",
+          professionalProfile: {
+            businessName: "Test SRL",
+            displayName: "Test SRL",
+          },
+        },
+        null,
+        [],
+        null
+      )
+    ).toEqual({
+      hasDrift: false,
+      issues: [],
+    });
   });
 });
