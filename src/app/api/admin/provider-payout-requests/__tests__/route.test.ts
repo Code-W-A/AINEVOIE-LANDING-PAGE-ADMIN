@@ -169,6 +169,50 @@ describe("admin provider payout request routes", () => {
     expect(json.items[0].provider.displayName).toBe("Provider One");
   });
 
+  it("filters payout requests by status in memory", async () => {
+    mocks.setFixtures({
+      payoutRequests: [
+        {
+          requestId: "payout_1",
+          providerId: "provider_1",
+          status: "requested",
+          currency: "RON",
+          grossAmount: 200,
+          platformFeeAmount: 40,
+          providerNetAmount: 160,
+          paymentIds: ["pay_1"],
+          requestedAt: new Date("2026-05-08T10:00:00.000Z"),
+        },
+        {
+          requestId: "payout_2",
+          providerId: "provider_1",
+          status: "paid",
+          currency: "RON",
+          grossAmount: 100,
+          platformFeeAmount: 20,
+          providerNetAmount: 80,
+          paymentIds: ["pay_2"],
+          requestedAt: new Date("2026-05-09T10:00:00.000Z"),
+        },
+      ],
+      payments: new Map([
+        ["pay_1", { paymentId: "pay_1", providerPayoutStatus: "requested" }],
+        ["pay_2", { paymentId: "pay_2", providerPayoutStatus: "paid" }],
+      ]),
+      providers: new Map([
+        ["provider_1", { email: "provider@example.com", professionalProfile: { displayName: "Provider One" } }],
+      ]),
+    });
+
+    const { GET } = await import("../route");
+    const response = await GET(new Request("https://example.com/api/admin/provider-payout-requests?status=requested"));
+    const json = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(json.items).toHaveLength(1);
+    expect(json.items[0].requestId).toBe("payout_1");
+  });
+
   it("marks a payout request paid and updates linked payments", async () => {
     const { POST } = await import("../[id]/mark-paid/route");
     const response = await POST(

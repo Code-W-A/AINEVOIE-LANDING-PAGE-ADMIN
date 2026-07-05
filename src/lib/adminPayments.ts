@@ -1,5 +1,6 @@
 import { Timestamp } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebaseAdmin";
+import { serializeRouteError } from "@/lib/adminRouteError";
 
 export type PaymentWebhookState = "ok" | "delayed" | "missing";
 
@@ -374,6 +375,43 @@ export async function listAdminPayments(
   };
 }
 
+function sortPayoutRequestsByRequestedAtDesc(
+  requests: Array<Record<string, unknown> & { requestId: string }>,
+) {
+  return [...requests].sort(
+    (first, second) =>
+      toMillis(second.requestedAt || second.createdAt)
+      - toMillis(first.requestedAt || first.createdAt),
+  );
+}
+
+function logAdminPaymentsStep(
+  level: "info" | "error",
+  step: string,
+  payload?: Record<string, unknown>,
+) {
+  const message = `[adminPayments] ${step}`;
+  if (level === "error") {
+    console.error(message, payload || {});
+    return;
+  }
+  console.info(message, payload || {});
+}
+
+function throwAdminPaymentsStepError(
+  step: string,
+  error: unknown,
+  extra?: Record<string, unknown>,
+): never {
+  const debug = serializeRouteError(error, step);
+  console.error("[adminPayments] step failed", { ...debug, ...extra });
+  throw Object.assign(new Error(`[${step}] ${debug.message}`), {
+    code: debug.code,
+    details: debug.details,
+    step,
+  });
+}
+
 export async function listAdminProviderPayoutRequests(options?: {
   status?: string;
   maxRows?: number;
@@ -381,19 +419,78 @@ export async function listAdminProviderPayoutRequests(options?: {
   const db = getAdminDb();
   const maxRows = Math.max(1, Math.floor(options?.maxRows || 100));
   const status = readString(options?.status);
-  let query: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> =
-    db.collection("providerPayoutRequests");
+  const fetchLimit = status ? Math.max(maxRows, 500) : maxRows;
 
-  if (status) {
-    query = query.where("status", "==", status);
+  let requests: Array<Record<string, unknown> & { requestId: string }> = [];
+
+  logAdminPaymentsStep("info", "providerPayoutRequests.query.start", {
+    status: status || "all",
+    fetchLimit,
+    maxRows,
+  });
+
+  try {
+    const snapshot = await db
+      .collection("providerPayoutRequests")
+      .orderBy("requestedAt", "desc")
+      .limit(fetchLimit)
+      .get();
+
+    requests = snapshot.docs.map((doc) => ({
+      requestId: doc.id,
+      ...doc.data(),
+    })) as Array<Record<string, unknown> & { requestId: string }>;
+
+    logAdminPaymentsStep("info", "providerPayoutRequests.query.success", {
+      count: requests.length,
+      mode: "orderBy",
+    });
+  } catch (error) {
+    logAdminPaymentsStep("error", "providerPayoutRequests.query.orderBy_failed", {
+      ...serializeRouteError(error, "providerPayoutRequests.orderBy"),
+    });
+
+    try {
+      logAdminPaymentsStep("info", "providerPayoutRequests.query.fallback.start", {
+        fetchLimit,
+      });
+
+      const snapshot = await db.collection("providerPayoutRequests").limit(fetchLimit).get();
+      requests = sortPayoutRequestsByRequestedAtDesc(
+        snapshot.docs.map((doc) => ({
+          requestId: doc.id,
+          ...doc.data(),
+        })) as Array<Record<string, unknown> & { requestId: string }>,
+      );
+
+      logAdminPaymentsStep("info", "providerPayoutRequests.query.fallback.success", {
+        count: requests.length,
+      });
+    } catch (fallbackError) {
+      throwAdminPaymentsStepError("providerPayoutRequests.query.fallback", fallbackError, {
+        primaryError: serializeRouteError(error, "providerPayoutRequests.orderBy"),
+      });
+    }
   }
 
-  const snapshot = await query.orderBy("requestedAt", "desc").limit(maxRows).get();
-  const requests = snapshot.docs.map((doc) => ({
-    requestId: doc.id,
-    ...doc.data(),
-  })) as Array<Record<string, unknown> & { requestId: string }>;
-  const providersById = await loadByIds("providers", readUniqueIds(requests, "providerId"));
+  if (status) {
+    requests = requests.filter((request) => readString(request.status) === status);
+  }
+
+  requests = requests.slice(0, maxRows);
+
+  let providersById: Map<string, Record<string, unknown>>;
+  try {
+    logAdminPaymentsStep("info", "providerPayoutRequests.providers.load.start", {
+      providerCount: readUniqueIds(requests, "providerId").length,
+    });
+    providersById = await loadByIds("providers", readUniqueIds(requests, "providerId"));
+    logAdminPaymentsStep("info", "providerPayoutRequests.providers.load.success", {
+      loadedCount: providersById.size,
+    });
+  } catch (error) {
+    throwAdminPaymentsStepError("providerPayoutRequests.providers.load", error);
+  }
 
   return requests.map((request) => {
     const providerId = readString(request.providerId) || null;

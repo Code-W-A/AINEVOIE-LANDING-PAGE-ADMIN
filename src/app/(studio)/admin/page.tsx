@@ -298,28 +298,6 @@ function ActionCard({
   );
 }
 
-function SummaryRow({
-  label,
-  value,
-  hint,
-  variant = "outline",
-}: {
-  label: string;
-  value: number;
-  hint: string;
-  variant?: BadgeVariant;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border border-border/80 bg-background/60 px-4 py-3">
-      <div className="min-w-0">
-        <p className="text-sm font-medium">{label}</p>
-        <p className="text-xs text-muted-foreground">{hint}</p>
-      </div>
-      <Badge variant={variant}>{value}</Badge>
-    </div>
-  );
-}
-
 function PreviewCard({
   title,
   description,
@@ -548,26 +526,15 @@ export default function AdminOperationalDashboardPage() {
       <div className="space-y-8">
         <AdminPageHeaderSkeleton />
         <AdminStatCardsSkeleton count={4} />
-        <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-          <Card>
-            <CardHeader>
-              <CardTitle>Atenție acum</CardTitle>
-              <CardDescription>Zonele care cer decizii rapide.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <AdminTableSkeleton rows={5} columns={5} />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Activitate în platformă</CardTitle>
-              <CardDescription>Sumar business pentru client.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <AdminTableSkeleton rows={5} columns={2} />
-            </CardContent>
-          </Card>
-        </div>
+        <Card className="overflow-hidden">
+          <CardHeader className="border-b border-border/70 bg-muted/30">
+            <CardTitle>Atenție acum</CardTitle>
+            <CardDescription>Zonele care cer decizii rapide.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <AdminTableSkeleton rows={5} columns={5} />
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -639,8 +606,7 @@ export default function AdminOperationalDashboardPage() {
         />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-        <Card className="overflow-hidden">
+      <Card className="overflow-hidden">
           <CardHeader className="border-b border-border/70 bg-muted/30">
             <SectionHeading
               eyebrow="Azi"
@@ -648,7 +614,7 @@ export default function AdminOperationalDashboardPage() {
               description="Aceste zone cer decizie sau verificare rapidă."
             />
           </CardHeader>
-          <CardContent className="grid gap-4 p-6 md:grid-cols-2">
+          <CardContent className="grid gap-4 p-6 sm:grid-cols-2 xl:grid-cols-4">
             <ActionCard
               icon={ShieldCheck}
               title="Prestatori în așteptare"
@@ -687,49 +653,6 @@ export default function AdminOperationalDashboardPage() {
             />
           </CardContent>
         </Card>
-
-        <Card className="overflow-hidden">
-          <CardHeader className="border-b border-border/70 bg-muted/30">
-            <SectionHeading
-              eyebrow="Sumar"
-              title="Activitate în platformă"
-              description="O imagine scurtă a situației curente din business."
-            />
-          </CardHeader>
-          <CardContent className="space-y-3 p-6">
-            <SummaryRow
-              label="Prestatori activi în platformă"
-              value={readNumber(totals.providers)}
-              hint="Baza totală de prestatori înregistrați."
-              variant="secondary"
-            />
-            <SummaryRow
-              label="Programări care cer atenție"
-              value={readNumber(summary.openBookingIssueCount)}
-              hint="Cereri noi, reprogramări sau plăți cu probleme."
-              variant={priorityTone(readNumber(summary.openBookingIssueCount))}
-            />
-            <SummaryRow
-              label="Reprogramări propuse"
-              value={rescheduleBookingsTotal}
-              hint="Programări care trebuie reconfirmate."
-              variant={priorityTone(rescheduleBookingsTotal)}
-            />
-            <SummaryRow
-              label="Tichete urgente"
-              value={urgentSupportTotal}
-              hint="Solicitări care pot afecta direct experiența clientului."
-              variant={riskTone(urgentSupportTotal)}
-            />
-            <SummaryRow
-              label="Conversații cu probleme"
-              value={flaggedConversationsTotal}
-              hint="Discuții care pot cere verificare sau intervenție."
-              variant={riskTone(flaggedConversationsTotal)}
-            />
-          </CardContent>
-        </Card>
-      </div>
 
       <div className="space-y-6">
         <SectionHeading
