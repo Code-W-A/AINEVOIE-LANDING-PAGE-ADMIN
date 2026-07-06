@@ -106,6 +106,15 @@ type ProviderPayoutRequestAdminItem = {
   paidAt: string | null;
   paidByAdminUid: string | null;
   adminNote: string | null;
+  payoutDetails: {
+    iban: string | null;
+    accountHolderName: string | null;
+    bankName: string | null;
+    ibanLast4: string | null;
+    updatedAt: string | null;
+    source: "snapshot" | "live_provider" | "missing";
+    isComplete: boolean;
+  };
   provider: {
     displayName: string | null;
     email: string | null;
@@ -316,7 +325,9 @@ export default function AdminPaymentsPage() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ adminNote: "Marcat plătit din Admin Plăți." }),
+          body: JSON.stringify({
+            adminNote: "Marcat plătit rapid din lista Plăți.",
+          }),
         }
       );
 
@@ -473,6 +484,7 @@ export default function AdminPaymentsPage() {
                 <TableRow>
                   <TableHead>Request</TableHead>
                   <TableHead>Provider</TableHead>
+                  <TableHead>Titular / IBAN</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Solicitat la</TableHead>
                   <TableHead>Brut</TableHead>
@@ -485,7 +497,12 @@ export default function AdminPaymentsPage() {
                 {payoutRequests.map((request) => (
                   <TableRow key={request.requestId}>
                     <TableCell>
-                      <div className="font-medium">{request.requestId}</div>
+                      <Link
+                        href={`/admin/plati/payout/${encodeURIComponent(request.requestId)}`}
+                        className="font-medium underline underline-offset-2"
+                      >
+                        {request.requestId}
+                      </Link>
                       <div className="text-xs text-muted-foreground">
                         {request.paymentIds.length} plăți
                       </div>
@@ -506,6 +523,12 @@ export default function AdminPaymentsPage() {
                       )}
                     </TableCell>
                     <TableCell>
+                      <div className="text-sm">{request.payoutDetails.accountHolderName || "-"}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {request.payoutDetails.ibanLast4 ? `****${request.payoutDetails.ibanLast4}` : "IBAN lipsă"}
+                      </div>
+                    </TableCell>
+                    <TableCell>
                       <Badge variant={payoutBadgeVariant(request.status)}>
                         {label(request.status)}
                       </Badge>
@@ -514,23 +537,46 @@ export default function AdminPaymentsPage() {
                     <TableCell>{formatMoneyValue(request.grossAmount, request.currency)}</TableCell>
                     <TableCell>{formatMoneyValue(request.platformFeeAmount, request.currency)}</TableCell>
                     <TableCell>{formatMoneyValue(request.providerNetAmount, request.currency)}</TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        disabled={request.status !== "requested" || pendingMarkPaidRequestId === request.requestId}
-                        onClick={() => { void handleMarkPayoutPaid(request.requestId); }}
-                      >
-                        <CheckCircle2 className="mr-2 h-4 w-4" />
-                        Mark paid
-                      </Button>
+                    <TableCell className="text-right align-middle">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8 shrink-0"
+                            disabled={pendingMarkPaidRequestId === request.requestId}
+                            aria-label="Acțiuni cerere payout"
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-52">
+                          <DropdownMenuItem asChild>
+                            <Link href={`/admin/plati/payout/${encodeURIComponent(request.requestId)}`}>
+                              Vezi detalii
+                            </Link>
+                          </DropdownMenuItem>
+                          {request.status === "requested" ? (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                disabled={pendingMarkPaidRequestId === request.requestId}
+                                onSelect={() => { void handleMarkPayoutPaid(request.requestId); }}
+                              >
+                                <CheckCircle2 className="mr-2 h-4 w-4" />
+                                Marchează plătit
+                              </DropdownMenuItem>
+                            </>
+                          ) : null}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}
                 {!payoutRequests.length && (
                   <TableRow>
-                    <TableCell colSpan={8} className="py-8 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={9} className="py-8 text-center text-sm text-muted-foreground">
                       Nu există cereri payout pentru filtrul selectat.
                     </TableCell>
                   </TableRow>

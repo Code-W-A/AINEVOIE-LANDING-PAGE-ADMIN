@@ -143,13 +143,36 @@ describe("admin provider payout request routes", () => {
           providerNetAmount: 160,
           paymentIds: ["pay_1"],
           requestedAt: new Date("2026-05-08T10:00:00.000Z"),
+          payoutDetailsSnapshot: {
+            iban: "RO49AAAA1B31007593840000",
+            accountHolderName: "Provider One SRL",
+            bankName: "Banca Demo",
+            updatedAt: new Date("2026-05-08T09:00:00.000Z"),
+          },
         },
       ],
       payments: new Map([
-        ["pay_1", { paymentId: "pay_1", providerPayoutStatus: "requested" }],
+        ["pay_1", {
+          paymentId: "pay_1",
+          bookingId: "booking_1",
+          providerPayoutStatus: "requested",
+          status: "paid",
+          providerNetAmount: 160,
+          grossAmount: 200,
+          platformFeeAmount: 40,
+          currency: "RON",
+        }],
       ]),
       providers: new Map([
-        ["provider_1", { email: "provider@example.com", professionalProfile: { displayName: "Provider One" } }],
+        ["provider_1", {
+          email: "provider@example.com",
+          professionalProfile: { displayName: "Provider One" },
+          payoutDetails: {
+            iban: "RO49AAAA1B31007593840000",
+            accountHolderName: "Provider One SRL",
+            bankName: "Banca Demo",
+          },
+        }],
       ]),
     });
   });
@@ -167,6 +190,97 @@ describe("admin provider payout request routes", () => {
       status: "requested",
     }));
     expect(json.items[0].provider.displayName).toBe("Provider One");
+    expect(json.items[0].payoutDetails).toEqual(expect.objectContaining({
+      accountHolderName: "Provider One SRL",
+      ibanLast4: "0000",
+      source: "snapshot",
+    }));
+  });
+
+  it("returns payout request detail with bank details and payments", async () => {
+    const { GET } = await import("../[id]/route");
+    const response = await GET(
+      new Request("https://example.com/api/admin/provider-payout-requests/payout_1"),
+      { params: Promise.resolve({ id: "payout_1" }) },
+    );
+    const json = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(json.item).toEqual(expect.objectContaining({
+      requestId: "payout_1",
+      providerNetAmount: 160,
+    }));
+    expect(json.item.payoutDetails).toEqual(expect.objectContaining({
+      iban: "RO49AAAA1B31007593840000",
+      accountHolderName: "Provider One SRL",
+      bankName: "Banca Demo",
+      source: "snapshot",
+    }));
+    expect(json.item.payments).toEqual([
+      expect.objectContaining({
+        paymentId: "pay_1",
+        bookingId: "booking_1",
+        providerNetAmount: 160,
+      }),
+    ]);
+  });
+
+  it("updates payout request admin note", async () => {
+    const { PATCH } = await import("../[id]/route");
+    const response = await PATCH(
+      new Request("https://example.com/api/admin/provider-payout-requests/payout_1", {
+        method: "PATCH",
+        body: JSON.stringify({ adminNote: "Transfer bancar confirmat" }),
+      }),
+      { params: Promise.resolve({ id: "payout_1" }) },
+    );
+    const json = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(json.item.adminNote).toBe("Transfer bancar confirmat");
+  });
+
+  it("falls back to live provider payout details when snapshot is missing", async () => {
+    mocks.setFixtures({
+      payoutRequests: [
+        {
+          requestId: "payout_legacy",
+          providerId: "provider_1",
+          status: "requested",
+          currency: "RON",
+          grossAmount: 160,
+          platformFeeAmount: 40,
+          providerNetAmount: 120,
+          paymentIds: ["pay_1"],
+          requestedAt: new Date("2026-05-08T10:00:00.000Z"),
+        },
+      ],
+      payments: new Map([
+        ["pay_1", { paymentId: "pay_1", providerPayoutStatus: "requested" }],
+      ]),
+      providers: new Map([
+        ["provider_1", {
+          email: "provider@example.com",
+          professionalProfile: { displayName: "Provider One" },
+          payoutDetails: {
+            iban: "RO49AAAA1B31007593840000",
+            accountHolderName: "Provider One SRL",
+            bankName: "Banca Demo",
+          },
+        }],
+      ]),
+    });
+
+    const { GET } = await import("../[id]/route");
+    const response = await GET(
+      new Request("https://example.com/api/admin/provider-payout-requests/payout_legacy"),
+      { params: Promise.resolve({ id: "payout_legacy" }) },
+    );
+    const json = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(json.item.payoutDetails.source).toBe("live_provider");
+    expect(json.item.payoutDetails.iban).toBe("RO49AAAA1B31007593840000");
   });
 
   it("filters payout requests by status in memory", async () => {

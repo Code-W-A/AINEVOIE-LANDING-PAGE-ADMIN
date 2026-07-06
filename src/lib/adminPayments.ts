@@ -73,11 +73,39 @@ export type ProviderPayoutRequestAdminItem = {
   paidAt: string | null;
   paidByAdminUid: string | null;
   adminNote: string | null;
+  payoutDetails: ProviderPayoutDetailsAdminItem;
   provider: {
     providerId: string | null;
     displayName: string | null;
     email: string | null;
   };
+};
+
+export type ProviderPayoutDetailsAdminItem = {
+  iban: string | null;
+  accountHolderName: string | null;
+  bankName: string | null;
+  ibanLast4: string | null;
+  updatedAt: string | null;
+  source: "snapshot" | "live_provider" | "missing";
+  isComplete: boolean;
+};
+
+export type ProviderPayoutRequestPaymentSummary = {
+  paymentId: string;
+  bookingId: string | null;
+  status: string;
+  providerPayoutStatus: string;
+  grossAmount: number;
+  platformFeeAmount: number;
+  providerNetAmount: number;
+  currency: string;
+};
+
+export type ProviderPayoutRequestDetailAdminItem = ProviderPayoutRequestAdminItem & {
+  createdAt: string | null;
+  updatedAt: string | null;
+  payments: ProviderPayoutRequestPaymentSummary[];
 };
 
 export type PaymentQueryResult = {
@@ -92,6 +120,81 @@ const WEBHOOK_MISSING_MS = 24 * 60 * 60 * 1000;
 
 function readString(value: unknown) {
   return String(value || "").trim();
+}
+
+function readRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function readProviderPayoutDetailsAdmin(
+  request: Record<string, unknown>,
+  provider: Record<string, unknown> | null,
+): ProviderPayoutDetailsAdminItem {
+  const snapshot = readRecord(request.payoutDetailsSnapshot);
+  const live = readRecord(provider?.payoutDetails);
+  const hasSnapshot = Boolean(readString(snapshot.iban));
+  const hasLive = Boolean(readString(live.iban));
+  const sourceData = hasSnapshot ? snapshot : live;
+  const iban = readString(sourceData.iban) || null;
+  const accountHolderName = readString(sourceData.accountHolderName) || null;
+  const bankName = readString(sourceData.bankName) || null;
+
+  return {
+    iban,
+    accountHolderName,
+    bankName,
+    ibanLast4: iban ? iban.slice(-4) : null,
+    updatedAt: toIso(sourceData.updatedAt),
+    source: hasSnapshot ? "snapshot" : hasLive ? "live_provider" : "missing",
+    isComplete: Boolean(iban && accountHolderName && bankName),
+  };
+}
+
+function mapProviderPayoutRequestAdminItem(
+  request: Record<string, unknown> & { requestId: string },
+  provider: Record<string, unknown> | null,
+): ProviderPayoutRequestAdminItem {
+  const providerId = readString(request.providerId) || null;
+
+  return {
+    requestId: readString(request.requestId),
+    providerId,
+    status: readString(request.status) || "requested",
+    currency: readString(request.currency) || "RON",
+    grossAmount: toNumber(request.grossAmount),
+    platformFeeAmount: toNumber(request.platformFeeAmount),
+    providerNetAmount: toNumber(request.providerNetAmount),
+    paymentIds: readStringArray(request.paymentIds),
+    requestedAt: toIso(request.requestedAt),
+    paidAt: toIso(request.paidAt),
+    paidByAdminUid: readString(request.paidByAdminUid) || null,
+    adminNote: readString(request.adminNote) || null,
+    payoutDetails: readProviderPayoutDetailsAdmin(request, provider),
+    provider: {
+      providerId,
+      displayName:
+        readString((provider?.professionalProfile as Record<string, unknown> | undefined)?.displayName) || null,
+      email: readString(provider?.email) || null,
+    },
+  };
+}
+
+function mapProviderPayoutPaymentSummary(
+  paymentId: string,
+  payment: Record<string, unknown>,
+): ProviderPayoutRequestPaymentSummary {
+  return {
+    paymentId,
+    bookingId: readString(payment.bookingId) || null,
+    status: readString(payment.status) || "unknown",
+    providerPayoutStatus: readString(payment.providerPayoutStatus) || "not_available",
+    grossAmount: toNumber(payment.grossAmount ?? payment.amount),
+    platformFeeAmount: toNumber(payment.platformFeeAmount),
+    providerNetAmount: toNumber(payment.providerNetAmount),
+    currency: readString(payment.currency) || "RON",
+  };
 }
 
 function toIso(value: unknown) {
@@ -495,28 +598,84 @@ export async function listAdminProviderPayoutRequests(options?: {
   return requests.map((request) => {
     const providerId = readString(request.providerId) || null;
     const provider = providerId ? providersById.get(providerId) || null : null;
-
-    return {
-      requestId: readString(request.requestId),
-      providerId,
-      status: readString(request.status) || "requested",
-      currency: readString(request.currency) || "RON",
-      grossAmount: toNumber(request.grossAmount),
-      platformFeeAmount: toNumber(request.platformFeeAmount),
-      providerNetAmount: toNumber(request.providerNetAmount),
-      paymentIds: readStringArray(request.paymentIds),
-      requestedAt: toIso(request.requestedAt),
-      paidAt: toIso(request.paidAt),
-      paidByAdminUid: readString(request.paidByAdminUid) || null,
-      adminNote: readString(request.adminNote) || null,
-      provider: {
-        providerId,
-        displayName:
-          readString((provider?.professionalProfile as Record<string, unknown> | undefined)?.displayName) || null,
-        email: readString(provider?.email) || null,
-      },
-    };
+    return mapProviderPayoutRequestAdminItem(request, provider);
   });
+}
+
+export async function getAdminProviderPayoutRequestDetail(
+  requestId: string,
+): Promise<ProviderPayoutRequestDetailAdminItem> {
+  const normalizedRequestId = readString(requestId);
+
+  if (!normalizedRequestId) {
+    throw new Error("missing_request_id");
+  }
+
+  const db = getAdminDb();
+  const requestSnap = await db.collection("providerPayoutRequests").doc(normalizedRequestId).get();
+
+  if (!requestSnap.exists) {
+    throw new Error("payout_request_not_found");
+  }
+
+  const request = {
+    requestId: requestSnap.id,
+    ...(requestSnap.data() || {}),
+  } as Record<string, unknown> & { requestId: string };
+  const providerId = readString(request.providerId) || null;
+  const providersById = await loadByIds("providers", providerId ? [providerId] : []);
+  const provider = providerId ? providersById.get(providerId) || null : null;
+  const baseItem = mapProviderPayoutRequestAdminItem(request, provider);
+  const paymentIds = readStringArray(request.paymentIds);
+  const paymentSnaps = await Promise.all(
+    paymentIds.map((paymentId) => db.collection("payments").doc(paymentId).get()),
+  );
+  const payments = paymentSnaps.map((paymentSnap, index) => mapProviderPayoutPaymentSummary(
+    paymentSnap.id || paymentIds[index],
+    paymentSnap.exists ? (paymentSnap.data() || {}) : {},
+  ));
+
+  return {
+    ...baseItem,
+    createdAt: toIso(request.createdAt),
+    updatedAt: toIso(request.updatedAt),
+    payments,
+  };
+}
+
+export async function updateAdminProviderPayoutRequestNote(params: {
+  requestId: string;
+  adminNote: string;
+  adminUid: string;
+}) {
+  const requestId = readString(params.requestId);
+  const adminUid = readString(params.adminUid);
+
+  if (!requestId) {
+    throw new Error("missing_request_id");
+  }
+
+  const db = getAdminDb();
+  const requestRef = db.collection("providerPayoutRequests").doc(requestId);
+  const requestSnap = await requestRef.get();
+
+  if (!requestSnap.exists) {
+    throw new Error("payout_request_not_found");
+  }
+
+  const status = readString(requestSnap.data()?.status);
+  if (status !== "requested" && status !== "paid") {
+    throw new Error("payout_request_note_not_allowed");
+  }
+
+  const now = Timestamp.now();
+  await requestRef.set({
+    adminNote: readString(params.adminNote) || null,
+    updatedAt: now,
+    updatedBy: adminUid,
+  }, { merge: true });
+
+  return getAdminProviderPayoutRequestDetail(requestId);
 }
 
 export async function markProviderPayoutRequestPaid(params: {
