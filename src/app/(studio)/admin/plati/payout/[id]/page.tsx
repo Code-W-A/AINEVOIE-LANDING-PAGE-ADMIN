@@ -8,6 +8,10 @@ import { adminFetch, readAdminResponseError } from "@/components/admin/adminApi"
 import { AdminTableSkeleton } from "@/components/admin/AdminSkeletonLayouts";
 import { useAdminData } from "@/components/admin/useAdminData";
 import { humanProviderLabel } from "@/lib/adminHumanize";
+import {
+  formatPayoutRequestLinkLabel,
+  formatPayoutRequestShortId,
+} from "@/lib/adminPaymentLabels";
 import { formatAdminDateTime } from "@/lib/formatAdminDateTime";
 import type {
   ProviderPayoutDetailsAdminItem,
@@ -206,11 +210,17 @@ export default function AdminProviderPayoutRequestDetailPage() {
           </Button>
           <div>
             <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-2xl font-semibold">{item.requestId}</h1>
+              <h1 className="text-2xl font-semibold">
+                {formatPayoutRequestLinkLabel({
+                  providerNetAmount: item.providerNetAmount,
+                  currency: item.currency,
+                  requestedAtLabel: formatAdminDateTime(item.requestedAt, { includeSeconds: true }),
+                })}
+              </h1>
               <Badge variant={payoutBadgeVariant(item.status)}>{label(item.status)}</Badge>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
-              Cerere payout provider · {item.paymentIds.length} plăți incluse
+              Cerere payout provider · {item.paymentIds.length} plăți incluse · ID {formatPayoutRequestShortId(item.requestId)}
             </p>
           </div>
         </div>

@@ -181,6 +181,7 @@ export default function AdminSubscriptionsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Acțiuni</TableHead>
                   <TableHead>Abonament</TableHead>
                   <TableHead>Frecvență</TableHead>
                   <TableHead>Status</TableHead>
@@ -188,12 +189,48 @@ export default function AdminSubscriptionsPage() {
                   <TableHead>Generate</TableHead>
                   <TableHead>User</TableHead>
                   <TableHead>Provider</TableHead>
-                  <TableHead className="text-right">Acțiuni</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {items.map((item) => (
                   <TableRow key={item.subscriptionId}>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        {item.status === "active" ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={pendingId === item.subscriptionId}
+                            onClick={() => { void applyStatus(item.subscriptionId, "paused"); }}
+                          >
+                            Pauză
+                          </Button>
+                        ) : null}
+                        {item.status === "paused" ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={pendingId === item.subscriptionId}
+                            onClick={() => { void applyStatus(item.subscriptionId, "active"); }}
+                          >
+                            Reactivează
+                          </Button>
+                        ) : null}
+                        {item.status !== "cancelled" ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="destructive"
+                            disabled={pendingId === item.subscriptionId}
+                            onClick={() => { void applyStatus(item.subscriptionId, "cancelled"); }}
+                          >
+                            Anulează
+                          </Button>
+                        ) : null}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <div className="font-medium">{item.subscriptionId}</div>
                       <div className="text-xs text-muted-foreground">
@@ -231,43 +268,6 @@ export default function AdminSubscriptionsPage() {
                       ) : (
                         "-"
                       )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        {item.status === "active" ? (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            disabled={pendingId === item.subscriptionId}
-                            onClick={() => { void applyStatus(item.subscriptionId, "paused"); }}
-                          >
-                            Pauză
-                          </Button>
-                        ) : null}
-                        {item.status === "paused" ? (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            disabled={pendingId === item.subscriptionId}
-                            onClick={() => { void applyStatus(item.subscriptionId, "active"); }}
-                          >
-                            Reactivează
-                          </Button>
-                        ) : null}
-                        {item.status !== "cancelled" ? (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="destructive"
-                            disabled={pendingId === item.subscriptionId}
-                            onClick={() => { void applyStatus(item.subscriptionId, "cancelled"); }}
-                          >
-                            Anulează
-                          </Button>
-                        ) : null}
-                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

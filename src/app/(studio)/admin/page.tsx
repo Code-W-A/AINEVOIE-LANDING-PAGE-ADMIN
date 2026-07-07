@@ -489,7 +489,7 @@ function ConversationPreview({ items }: { items: Array<Record<string, unknown>> 
             <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
               <span>{formatAdminDateTime(readString(item.updatedAt) || readString(item.createdAt), { includeSeconds: true })}</span>
               <Button asChild size="sm" variant="outline">
-                <Link href={`/admin/conversatii?conversationId=${encodeURIComponent(id)}`}>Deschide</Link>
+                <Link href={`/admin/conversatii/${encodeURIComponent(id)}`}>Deschide</Link>
               </Button>
             </div>
           </div>

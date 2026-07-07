@@ -15,7 +15,6 @@ import {
   getBookingSummaryMetrics,
   getConversationId,
   getPaymentFromCase,
-  getPaymentLookupId,
   mergeBookingCaseData,
   readBookingCaseResult,
   type ResolutionStatus,
@@ -129,7 +128,6 @@ export default function AdminBookingDetailPage() {
   const auditEvents = data.recentAuditEvents || [];
   const conversation = data.conversation || null;
   const conversationId = getConversationId(getBookingId(booking, bookingId), conversation);
-  const paymentLookupId = getPaymentLookupId(payment, getBookingId(booking, bookingId));
   const reviewId = String(data.review?.reviewId || data.review?.id || "");
   const summaryMetrics = getBookingSummaryMetrics(
     booking,
@@ -147,8 +145,6 @@ export default function AdminBookingDetailPage() {
         payment={payment}
         user={data.user}
         provider={data.provider}
-        conversationId={conversationId}
-        paymentLookupId={paymentLookupId}
         reviewId={reviewId || null}
       />
 
@@ -159,10 +155,6 @@ export default function AdminBookingDetailPage() {
         payment={payment}
         user={data.user}
         provider={data.provider}
-        conversation={conversation}
-        conversationId={conversationId}
-        supportTickets={supportTickets}
-        review={data.review}
         timelineEvents={timelineEvents}
       />
 

@@ -3,12 +3,18 @@
 import { useCallback, useEffect, useState } from "react";
 import { adminFetch, readAdminResponseError } from "@/components/admin/adminApi";
 
-export function useAdminData<T>(endpoint: string) {
+export function useAdminData<T>(endpoint: string, options?: { enabled?: boolean }) {
+  const enabled = options?.enabled !== false;
   const [data, setData] = useState<T | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(enabled);
   const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       const res = await adminFetch(endpoint, { cache: "no-store" });
@@ -23,11 +29,16 @@ export function useAdminData<T>(endpoint: string) {
     } finally {
       setLoading(false);
     }
-  }, [endpoint]);
+  }, [enabled, endpoint]);
 
   useEffect(() => {
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
+
     reload();
-  }, [reload]);
+  }, [enabled, reload]);
 
   return { data, loading, error, reload };
 }

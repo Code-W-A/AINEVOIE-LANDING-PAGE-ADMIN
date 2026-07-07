@@ -515,13 +515,38 @@ function throwAdminPaymentsStepError(
   });
 }
 
+function matchesPayoutRequestSearch(
+  request: ProviderPayoutRequestAdminItem,
+  searchQuery: string,
+) {
+  if (!searchQuery) {
+    return true;
+  }
+  const token = searchQuery.toLowerCase();
+  return [
+    request.requestId,
+    request.providerId,
+    request.provider.displayName,
+    request.provider.email,
+    request.payoutDetails.accountHolderName,
+    request.payoutDetails.ibanLast4,
+    request.payoutDetails.bankName,
+  ]
+    .map((value) => normalizeText(value))
+    .some((value) => value.includes(token));
+}
+
 export async function listAdminProviderPayoutRequests(options?: {
   status?: string;
+  providerId?: string;
+  q?: string;
   maxRows?: number;
 }): Promise<ProviderPayoutRequestAdminItem[]> {
   const db = getAdminDb();
   const maxRows = Math.max(1, Math.floor(options?.maxRows || 100));
   const status = readString(options?.status);
+  const providerId = readString(options?.providerId);
+  const query = readString(options?.q);
   const fetchLimit = status ? Math.max(maxRows, 500) : maxRows;
 
   let requests: Array<Record<string, unknown> & { requestId: string }> = [];
@@ -580,6 +605,10 @@ export async function listAdminProviderPayoutRequests(options?: {
     requests = requests.filter((request) => readString(request.status) === status);
   }
 
+  if (providerId) {
+    requests = requests.filter((request) => readString(request.providerId) === providerId);
+  }
+
   requests = requests.slice(0, maxRows);
 
   let providersById: Map<string, Record<string, unknown>>;
@@ -599,7 +628,7 @@ export async function listAdminProviderPayoutRequests(options?: {
     const providerId = readString(request.providerId) || null;
     const provider = providerId ? providersById.get(providerId) || null : null;
     return mapProviderPayoutRequestAdminItem(request, provider);
-  });
+  }).filter((request) => matchesPayoutRequestSearch(request, query));
 }
 
 export async function getAdminProviderPayoutRequestDetail(

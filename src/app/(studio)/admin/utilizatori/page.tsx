@@ -253,13 +253,13 @@ export default function AdminUsersPage() {
                       onChange={(event) => toggleSelectAll(event.target.checked)}
                     />
                   </TableHead>
+                  <TableHead>Acțiuni</TableHead>
                   <TableHead>Utilizator</TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead>Status cont</TableHead>
                   <TableHead>Consimțăminte</TableHead>
                   <TableHead>Locație</TableHead>
                   <TableHead>Activitate</TableHead>
-                  <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -287,6 +287,32 @@ export default function AdminUsersPage() {
                         />
                       </TableCell>
                       <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            disabled={!userId || deleting || pendingBulkDelete}
+                            onClick={() => {
+                              setDeleteSuccess(null);
+                              setDeleteError(null);
+                              setDeleteTarget({
+                                id: userId,
+                                name: item.displayName || item.email || userId,
+                              });
+                            }}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Șterge
+                          </Button>
+                          <Button size="sm" variant="outline" asChild disabled={!userId}>
+                            <Link href={`/admin/utilizatori/${userId}`}>
+                              <FileText className="mr-2 h-4 w-4" />
+                              Detalii
+                            </Link>
+                          </Button>
+                        </div>
+                      </TableCell>
+                      <TableCell>
                         <div className="font-medium">
                           {humanUserLabel({
                             displayName: item.displayName,
@@ -311,32 +337,6 @@ export default function AdminUsersPage() {
                         <div className="text-xs text-muted-foreground">
                           <div>Creat: {formatAdminDateTime(item.createdAt)}</div>
                           <div>Login: {formatAdminDateTime(item.lastLoginAt)}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            disabled={!userId || deleting || pendingBulkDelete}
-                            onClick={() => {
-                              setDeleteSuccess(null);
-                              setDeleteError(null);
-                              setDeleteTarget({
-                                id: userId,
-                                name: item.displayName || item.email || userId,
-                              });
-                            }}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Șterge
-                          </Button>
-                          <Button size="sm" variant="outline" asChild disabled={!userId}>
-                            <Link href={`/admin/utilizatori/${userId}`}>
-                              <FileText className="mr-2 h-4 w-4" />
-                              Detalii
-                            </Link>
-                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>

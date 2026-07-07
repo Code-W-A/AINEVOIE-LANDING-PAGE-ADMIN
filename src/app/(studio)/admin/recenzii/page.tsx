@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { Download, Eye, EyeOff, Filter, Search, Save, Trash2, X } from "lucide-react";
+import { Download, Filter, MoreHorizontal, Pencil, Search, Trash2, X } from "lucide-react";
 import { useAdminData } from "@/components/admin/useAdminData";
 import { adminFetch, readAdminResponseError } from "@/components/admin/adminApi";
 import { AdminConfirmDialog } from "@/components/admin/AdminConfirmDialog";
@@ -21,6 +21,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -86,6 +93,7 @@ type ReviewsResponse = {
 };
 
 const statuses: ReviewStatus[] = ["published", "hidden_by_admin", "deleted_by_admin"];
+const editableStatuses: ReviewStatus[] = ["published", "hidden_by_admin"];
 
 const statusLabels: Record<string, string> = {
   published: "Publicată",
@@ -101,6 +109,13 @@ type ReviewFilterDraft = {
   ratingMax: string;
   dateFrom: string;
   dateTo: string;
+};
+
+type ReviewEditDraft = {
+  rating: string;
+  review: string;
+  status: ReviewStatus;
+  note: string;
 };
 
 const defaultFilters: ReviewFilterDraft = {
@@ -141,6 +156,20 @@ function countActiveFilters(filters: ReviewFilterDraft) {
   ].filter(Boolean).length;
 }
 
+function buildEditDraft(item: ReviewAdminListItem): ReviewEditDraft {
+  const status = item.status === "hidden_by_admin" ? "hidden_by_admin" : "published";
+  return {
+    rating: String(item.rating || 1),
+    review: item.review || "",
+    status,
+    note: item.adminModeration?.note || "",
+  };
+}
+
+function isReviewEditable(item: ReviewAdminListItem) {
+  return item.status !== "deleted_by_admin";
+}
+
 export default function AdminReviewsPage() {
   const [q, setQ] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
@@ -154,7 +183,9 @@ export default function AdminReviewsPage() {
   const [page, setPage] = useState(1);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
+  const [viewTarget, setViewTarget] = useState<ReviewAdminListItem | null>(null);
+  const [editTarget, setEditTarget] = useState<ReviewAdminListItem | null>(null);
+  const [editDraft, setEditDraft] = useState<ReviewEditDraft | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ReviewAdminListItem | null>(null);
   const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
   const [pendingBulkDelete, setPendingBulkDelete] = useState(false);
@@ -224,34 +255,42 @@ export default function AdminReviewsPage() {
     setSelectedIds,
   } = useAdminBulkSelection(pageIds, [endpoint]);
 
-  useEffect(() => {
-    setNoteDrafts((current) => {
-      const next = { ...current };
-      items.forEach((item) => {
-        if (!(item.reviewId in next)) {
-          next[item.reviewId] = item.adminModeration?.note || "";
-        }
-      });
-      return next;
-    });
-  }, [items]);
+  function openEditDialog(item: ReviewAdminListItem) {
+    setViewTarget(null);
+    setEditTarget(item);
+    setEditDraft(buildEditDraft(item));
+  }
 
-  async function submitModeration(
-    reviewId: string,
-    payload: { status?: ReviewStatus; note?: string }
-  ) {
-    setPendingId(reviewId);
+  function openViewDialog(item: ReviewAdminListItem) {
+    setEditTarget(null);
+    setEditDraft(null);
+    setViewTarget(item);
+  }
+
+  async function submitReviewUpdate() {
+    if (!editTarget || !editDraft) {
+      return false;
+    }
+
+    setPendingId(editTarget.reviewId);
     setActionError(null);
     try {
-      const response = await adminFetch(`/api/admin/reviews/${encodeURIComponent(reviewId)}/moderation`, {
+      const response = await adminFetch(`/api/admin/reviews/${encodeURIComponent(editTarget.reviewId)}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          rating: Number(editDraft.rating),
+          review: editDraft.review,
+          status: editDraft.status,
+          note: editDraft.note,
+        }),
       });
       if (!response.ok) {
         throw new Error(await readAdminResponseError(response, "Nu am putut actualiza review-ul."));
       }
       await reload();
+      setEditTarget(null);
+      setEditDraft(null);
       return true;
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Nu am putut actualiza review-ul.");
@@ -280,6 +319,7 @@ export default function AdminReviewsPage() {
     setBulkActionSummary(null);
     try {
       await deleteReviewHard(deleteTarget.reviewId);
+      setViewTarget(null);
       await reload();
       return true;
     } catch (err) {
@@ -490,9 +530,8 @@ export default function AdminReviewsPage() {
               </TableHeader>
               <TableBody>
                 {items.map((item) => {
-                  const note = noteDrafts[item.reviewId] ?? "";
                   const isPending = pendingId === item.reviewId;
-                  const isDeleted = item.status === "deleted_by_admin";
+                  const canEdit = isReviewEditable(item);
                   return (
                     <TableRow key={item.reviewId}>
                       <TableCell>
@@ -541,74 +580,42 @@ export default function AdminReviewsPage() {
                         </Link>
                       </TableCell>
                       <TableCell>{item.serviceSnapshot?.serviceName || "-"}</TableCell>
-                      <TableCell className="min-w-[280px]">
-                        <div className="space-y-2">
-                          <Input
-                            value={note}
-                            placeholder="Notă internă"
-                            disabled={isPending}
-                            onChange={(event) =>
-                              setNoteDrafts((current) => ({
-                                ...current,
-                                [item.reviewId]: event.target.value,
-                              }))
-                            }
-                          />
-                          <div className="flex flex-wrap gap-2">
-                            {!isDeleted && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                disabled={isPending || item.status === "hidden_by_admin"}
-                                onClick={() =>
-                                  void submitModeration(item.reviewId, {
-                                    status: "hidden_by_admin",
-                                    note,
-                                  })
-                                }
-                              >
-                                <EyeOff className="mr-2 h-4 w-4" />
-                                Hide
-                              </Button>
-                            )}
-                            {!isDeleted && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                disabled={isPending || item.status === "published"}
-                                onClick={() =>
-                                  void submitModeration(item.reviewId, {
-                                    status: "published",
-                                    note,
-                                  })
-                                }
-                              >
-                                <Eye className="mr-2 h-4 w-4" />
-                                Re-publish
-                              </Button>
-                            )}
+                      <TableCell className="w-12 align-middle">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
                             <Button
-                              size="sm"
+                              type="button"
                               variant="outline"
-                              disabled={isPending}
-                              onClick={() =>
-                                void submitModeration(item.reviewId, { note })
-                              }
-                            >
-                              <Save className="mr-2 h-4 w-4" />
-                              Salvează nota
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
+                              size="icon"
+                              className="h-8 w-8 shrink-0"
                               disabled={isPending || pendingBulkDelete}
-                              onClick={() => setDeleteTarget(item)}
+                              aria-label="Acțiuni recenzie"
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-56">
+                            <DropdownMenuItem onSelect={() => openViewDialog(item)}>
+                              Vezi recenzie
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              disabled={!canEdit}
+                              onSelect={() => openEditDialog(item)}
+                            >
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Modifică
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                              disabled={isPending || pendingBulkDelete}
+                              onSelect={() => setDeleteTarget(item)}
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
-                              Șterge
-                            </Button>
-                          </div>
-                        </div>
+                              Șterge recenzie
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   );
@@ -692,6 +699,231 @@ export default function AdminReviewsPage() {
         confirmDisabled={selectedCount === 0}
         onConfirm={confirmBulkDeleteReviews}
       />
+      <Dialog
+        open={Boolean(viewTarget)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setViewTarget(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Vezi recenzie</DialogTitle>
+            <DialogDescription>
+              Detalii complete ale recenziei selectate.
+            </DialogDescription>
+          </DialogHeader>
+          {viewTarget ? (
+            <div className="space-y-4 py-2 text-sm">
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <p className="text-xs text-muted-foreground">Review ID</p>
+                  <p className="font-medium">{viewTarget.reviewId}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Booking</p>
+                  <Link
+                    className="font-medium underline underline-offset-2"
+                    href={`/admin/programari/${encodeURIComponent(viewTarget.bookingId)}`}
+                  >
+                    {viewTarget.bookingId}
+                  </Link>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Status</p>
+                  <Badge variant={badgeVariant(viewTarget.status)}>{label(viewTarget.status)}</Badge>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Rating</p>
+                  <p className="font-medium">{viewTarget.rating || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Creat la</p>
+                  <p className="font-medium">
+                    {formatAdminDateTime(viewTarget.createdAt, { includeSeconds: true })}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Serviciu</p>
+                  <p className="font-medium">{viewTarget.serviceSnapshot?.serviceName || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Provider</p>
+                  <Link
+                    className="font-medium underline underline-offset-2"
+                    href={`/admin/prestatori/${encodeURIComponent(viewTarget.providerId)}`}
+                  >
+                    {humanProviderLabel({
+                      displayName: viewTarget.provider?.displayName || viewTarget.providerSnapshot?.displayName,
+                      email: viewTarget.provider?.email,
+                    })}
+                  </Link>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">User</p>
+                  <Link
+                    className="font-medium underline underline-offset-2"
+                    href={`/admin/utilizatori/${encodeURIComponent(viewTarget.authorUserId)}`}
+                  >
+                    {humanUserLabel({
+                      displayName: viewTarget.user?.displayName || viewTarget.authorSnapshot?.displayName,
+                      email: viewTarget.user?.email,
+                    })}
+                  </Link>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Text recenzie</p>
+                <p className="mt-1 whitespace-pre-wrap rounded-md border bg-muted/40 p-3">
+                  {viewTarget.review || "Fără text"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Notă internă admin</p>
+                <p className="mt-1 whitespace-pre-wrap rounded-md border bg-muted/40 p-3">
+                  {viewTarget.adminModeration?.note || "Fără notă internă"}
+                </p>
+              </div>
+            </div>
+          ) : null}
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={() => setViewTarget(null)}>
+              Închide
+            </Button>
+            {viewTarget && isReviewEditable(viewTarget) ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => openEditDialog(viewTarget)}
+              >
+                <Pencil className="mr-2 h-4 w-4" />
+                Modifică
+              </Button>
+            ) : null}
+            {viewTarget ? (
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={Boolean(pendingId) || pendingBulkDelete}
+                onClick={() => setDeleteTarget(viewTarget)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Șterge recenzie
+              </Button>
+            ) : null}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={Boolean(editTarget && editDraft)}
+        onOpenChange={(open) => {
+          if (!open && pendingId !== editTarget?.reviewId) {
+            setEditTarget(null);
+            setEditDraft(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Modifică recenzie</DialogTitle>
+            <DialogDescription>
+              Actualizează textul, rating-ul, statusul și nota internă de moderare.
+            </DialogDescription>
+          </DialogHeader>
+          {editTarget && editDraft ? (
+            <div className="grid gap-4 py-2 md:grid-cols-2">
+              <label className="space-y-2 text-sm">
+                <span className="font-medium">Rating</span>
+                <select
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={editDraft.rating}
+                  disabled={pendingId === editTarget.reviewId}
+                  onChange={(event) =>
+                    setEditDraft((current) =>
+                      current ? { ...current, rating: event.target.value } : current
+                    )
+                  }
+                >
+                  {ratingOptions.filter((item) => item !== "all").map((item) => (
+                    <option key={`edit-rating-${item}`} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="space-y-2 text-sm">
+                <span className="font-medium">Status</span>
+                <select
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={editDraft.status}
+                  disabled={pendingId === editTarget.reviewId}
+                  onChange={(event) =>
+                    setEditDraft((current) =>
+                      current
+                        ? { ...current, status: event.target.value as ReviewStatus }
+                        : current
+                    )
+                  }
+                >
+                  {editableStatuses.map((item) => (
+                    <option key={`edit-status-${item}`} value={item}>
+                      {label(item)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="space-y-2 text-sm md:col-span-2">
+                <span className="font-medium">Text recenzie</span>
+                <textarea
+                  className="min-h-[120px] w-full rounded-md border border-input bg-background p-3 text-sm"
+                  value={editDraft.review}
+                  disabled={pendingId === editTarget.reviewId}
+                  onChange={(event) =>
+                    setEditDraft((current) =>
+                      current ? { ...current, review: event.target.value } : current
+                    )
+                  }
+                />
+              </label>
+              <label className="space-y-2 text-sm md:col-span-2">
+                <span className="font-medium">Notă internă admin</span>
+                <textarea
+                  className="min-h-[96px] w-full rounded-md border border-input bg-background p-3 text-sm"
+                  value={editDraft.note}
+                  disabled={pendingId === editTarget.reviewId}
+                  onChange={(event) =>
+                    setEditDraft((current) =>
+                      current ? { ...current, note: event.target.value } : current
+                    )
+                  }
+                  placeholder="Notă internă de moderare"
+                />
+              </label>
+            </div>
+          ) : null}
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={pendingId === editTarget?.reviewId}
+              onClick={() => {
+                setEditTarget(null);
+                setEditDraft(null);
+              }}
+            >
+              Anulează
+            </Button>
+            <Button
+              type="button"
+              disabled={!editTarget || !editDraft || pendingId === editTarget.reviewId}
+              onClick={() => void submitReviewUpdate()}
+            >
+              {pendingId === editTarget?.reviewId ? "Se salvează..." : "Salvează"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <Dialog open={filterDialogOpen} onOpenChange={setFilterDialogOpen}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>

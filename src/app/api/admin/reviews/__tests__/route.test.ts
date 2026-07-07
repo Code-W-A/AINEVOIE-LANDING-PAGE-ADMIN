@@ -168,6 +168,22 @@ const mocks = vi.hoisted(() => {
           return {
             doc: (id: string) => ({
               get: async () => getDocFrom(collectionName, id),
+              set: async (payload: AnyRecord, options?: { merge?: boolean }) => {
+                const current = bookings.get(id) || {};
+                bookings.set(
+                  id,
+                  options?.merge
+                    ? {
+                        ...current,
+                        ...payload,
+                        reviewSummary: {
+                          ...(current.reviewSummary || {}),
+                          ...(payload.reviewSummary || {}),
+                        },
+                      }
+                    : { ...payload }
+                );
+              },
             }),
           };
         },
@@ -469,5 +485,93 @@ describe("admin reviews routes", () => {
     );
 
     expect(response.status).toBe(403);
+  });
+
+  it("updates review content, status and note with audit event", async () => {
+    const { PATCH } = await import("../[id]/route");
+    const response = await PATCH(
+      new Request("https://example.com/api/admin/reviews/bk_1", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          rating: 4,
+          review: "Serviciu bun, dar cu mici întârzieri",
+          status: "hidden_by_admin",
+          note: "Ascuns temporar",
+        }),
+      }),
+      { params: Promise.resolve({ id: "bk_1" }) }
+    );
+    const json = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(json.item.rating).toBe(4);
+    expect(json.item.review).toBe("Serviciu bun, dar cu mici întârzieri");
+    expect(json.item.status).toBe("hidden_by_admin");
+    expect(json.item.adminModeration.note).toBe("Ascuns temporar");
+
+    const auditWrites = mocks.getAuditWrites();
+    expect(auditWrites).toHaveLength(1);
+    expect(auditWrites[0].action).toBe("review.admin.update");
+    expect(auditWrites[0].statusFrom).toBe("published");
+    expect(auditWrites[0].statusTo).toBe("hidden_by_admin");
+  });
+
+  it("rejects invalid rating on review update", async () => {
+    const { PATCH } = await import("../[id]/route");
+    const response = await PATCH(
+      new Request("https://example.com/api/admin/reviews/bk_1", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ rating: 6 }),
+      }),
+      { params: Promise.resolve({ id: "bk_1" }) }
+    );
+    const json = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(json.error).toContain("Rating-ul");
+  });
+
+  it("returns 404 when updating a missing review", async () => {
+    const { PATCH } = await import("../[id]/route");
+    const response = await PATCH(
+      new Request("https://example.com/api/admin/reviews/missing", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ review: "Text nou" }),
+      }),
+      { params: Promise.resolve({ id: "missing" }) }
+    );
+    const json = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(json.error).toContain("nu există");
+  });
+
+  it("rejects republishing a review deleted by admin via update", async () => {
+    const { PATCH: patchModeration } = await import("../[id]/moderation/route");
+    await patchModeration(
+      new Request("https://example.com/api/admin/reviews/bk_1/moderation", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ status: "deleted_by_admin" }),
+      }),
+      { params: Promise.resolve({ id: "bk_1" }) }
+    );
+
+    const { PATCH } = await import("../[id]/route");
+    const response = await PATCH(
+      new Request("https://example.com/api/admin/reviews/bk_1", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ status: "published" }),
+      }),
+      { params: Promise.resolve({ id: "bk_1" }) }
+    );
+    const json = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(json.error).toContain("nu poate fi republicat");
   });
 });

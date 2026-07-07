@@ -248,7 +248,7 @@ async function searchPayments(query: string): Promise<SearchGroup> {
       ].filter(Boolean).join(" · ") || null,
       href: readString(data.bookingId)
         ? `/admin/programari/${encode(readString(data.bookingId))}`
-        : `/admin/plati?q=${encode(id)}`,
+        : "/admin/plati",
       meta: readString(data.processor) || readString(data.method) || null,
     }));
 
@@ -331,7 +331,7 @@ async function searchConversations(query: string): Promise<SearchGroup> {
         readString(data.status),
         readString(data.bookingId) ? `booking ${readString(data.bookingId)}` : "",
       ].filter(Boolean).join(" · ") || null,
-      href: `/admin/conversatii?conversationId=${encode(id)}`,
+      href: `/admin/conversatii/${encode(id)}`,
       meta: id,
     }));
 

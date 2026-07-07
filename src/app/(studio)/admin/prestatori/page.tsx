@@ -357,6 +357,7 @@ export default function AdminProvidersPage() {
                       onChange={(event) => toggleSelectAll(event.target.checked)}
                     />
                   </TableHead>
+                  <TableHead>Acțiuni</TableHead>
                   <TableHead>Provider</TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead>Status</TableHead>
@@ -365,7 +366,6 @@ export default function AdminProvidersPage() {
                   <TableHead>Document identitate</TableHead>
                   <TableHead>Document profesional</TableHead>
                   <TableHead>Data creare cont</TableHead>
-                  <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -391,6 +391,32 @@ export default function AdminProvidersPage() {
                           }
                           disabled={!providerId}
                         />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            disabled={!providerId || deleting || pendingBulkDelete}
+                            onClick={() => {
+                              setDeleteSuccess(null);
+                              setDeleteError(null);
+                              setDeleteTarget({
+                                id: providerId,
+                                name: item.displayName || item.businessName || providerId,
+                              });
+                            }}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Șterge
+                          </Button>
+                          <Button size="sm" variant="outline" asChild disabled={!providerId}>
+                            <Link href={`/admin/prestatori/${providerId}`}>
+                              <FileText className="mr-2 h-4 w-4" />
+                              Detalii
+                            </Link>
+                          </Button>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="font-medium">
@@ -426,32 +452,6 @@ export default function AdminProvidersPage() {
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {formatAdminDateTime(item.createdAt)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            disabled={!providerId || deleting || pendingBulkDelete}
-                            onClick={() => {
-                              setDeleteSuccess(null);
-                              setDeleteError(null);
-                              setDeleteTarget({
-                                id: providerId,
-                                name: item.displayName || item.businessName || providerId,
-                              });
-                            }}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Șterge
-                          </Button>
-                          <Button size="sm" variant="outline" asChild disabled={!providerId}>
-                            <Link href={`/admin/prestatori/${providerId}`}>
-                              <FileText className="mr-2 h-4 w-4" />
-                              Detalii
-                            </Link>
-                          </Button>
-                        </div>
                       </TableCell>
                     </TableRow>
                   );

@@ -4,9 +4,6 @@ import Link from "next/link";
 import {
   CalendarClock,
   ChevronLeft,
-  CreditCard,
-  LifeBuoy,
-  MessageSquare,
   Star,
   UserRound,
 } from "lucide-react";
@@ -34,16 +31,12 @@ export function BookingDetailHeader({
   payment,
   user,
   provider,
-  conversationId,
-  paymentLookupId,
   reviewId,
 }: {
   booking: BookingDocument;
   payment: PaymentDocument | null;
   user?: Record<string, unknown> | null;
   provider?: Record<string, unknown> | null;
-  conversationId: string;
-  paymentLookupId: string;
   reviewId?: string | null;
 }) {
   const userName = getUserDisplayName(booking, user);
@@ -111,26 +104,6 @@ export function BookingDetailHeader({
                 <Link href={`/admin/prestatori/${encodeURIComponent(String(booking.providerId))}`}>
                   <UserRound className="h-4 w-4" />
                   Deschide prestator
-                </Link>
-              </Button>
-            ) : null}
-            <Button asChild variant="outline" size="sm">
-              <Link href={`/admin/conversatii?conversationId=${encodeURIComponent(conversationId)}`}>
-                <MessageSquare className="h-4 w-4" />
-                Conversație
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="sm">
-              <Link href={`/admin/suport?q=${encodeURIComponent(String(booking.bookingId || ""))}`}>
-                <LifeBuoy className="h-4 w-4" />
-                Suport
-              </Link>
-            </Button>
-            {paymentLookupId ? (
-              <Button asChild variant="outline" size="sm">
-                <Link href={`/admin/plati?q=${encodeURIComponent(paymentLookupId)}`}>
-                  <CreditCard className="h-4 w-4" />
-                  Plată
                 </Link>
               </Button>
             ) : null}

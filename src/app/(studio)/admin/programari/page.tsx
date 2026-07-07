@@ -425,13 +425,13 @@ export default function AdminBookingsPage() {
                       onChange={(event) => toggleSelectAll(event.target.checked)}
                     />
                   </TableHead>
+                  <TableHead className="w-12">Acțiuni</TableHead>
                   <TableHead>Programare</TableHead>
                   <TableHead>Client</TableHead>
                   <TableHead>Prestator</TableHead>
                   <TableHead>Serviciu</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Plată</TableHead>
-                  <TableHead className="text-right">Acțiuni</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -446,6 +446,38 @@ export default function AdminBookingsPage() {
                           checked={selectedIds.has(item.bookingId)}
                           onChange={(event) => toggleRow(item.bookingId, event.target.checked)}
                         />
+                      </TableCell>
+                      <TableCell className="w-12 align-middle">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 shrink-0"
+                              disabled={Boolean(pendingDeleteBookingId) || pendingBulkDelete}
+                              aria-label="Acțiuni programare"
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" className="w-56">
+                            <DropdownMenuItem asChild>
+                              <Link href={`/admin/programari/${encodeURIComponent(item.bookingId)}`}>
+                                Vezi programare
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                              disabled={Boolean(pendingDeleteBookingId)}
+                              onSelect={() => setDeleteTargetBookingId(item.bookingId)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Șterge programare
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-start gap-2">
@@ -491,38 +523,6 @@ export default function AdminBookingsPage() {
                           <p className="text-xs text-muted-foreground">{formatAmount(item)}</p>
                           <p className="text-xs text-muted-foreground">{label(item.paymentSummary?.processor)}</p>
                         </div>
-                      </TableCell>
-                      <TableCell className="text-right align-middle">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8 shrink-0"
-                              disabled={Boolean(pendingDeleteBookingId) || pendingBulkDelete}
-                              aria-label="Acțiuni programare"
-                            >
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-56">
-                            <DropdownMenuItem asChild>
-                              <Link href={`/admin/programari/${encodeURIComponent(item.bookingId)}`}>
-                                Vezi programare
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-                              disabled={Boolean(pendingDeleteBookingId)}
-                              onSelect={() => setDeleteTargetBookingId(item.bookingId)}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Șterge programare
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   );

@@ -66,7 +66,7 @@ export function BookingSupportTab({
             </p>
           )}
           <Button asChild variant="outline" size="sm">
-            <Link href={`/admin/conversatii?conversationId=${encodeURIComponent(conversationId)}`}>
+            <Link href={`/admin/conversatii/${encodeURIComponent(conversationId)}`}>
               Deschide conversația
             </Link>
           </Button>

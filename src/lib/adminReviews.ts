@@ -8,6 +8,13 @@ export type ReviewModerationPayload = {
   note?: string;
 };
 
+export type ReviewUpdatePayload = {
+  rating?: number;
+  review?: string;
+  status?: ReviewStatus;
+  note?: string;
+};
+
 export type ReviewAdminListItem = {
   reviewId: string;
   bookingId: string;
@@ -430,6 +437,154 @@ export async function moderateAdminReview(
       ? (providerSnap.data() as Record<string, unknown>)
       : null
   );
+}
+
+function normalizeReviewRating(value: unknown) {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue) || numericValue < 1 || numericValue > 5) {
+    throw new AdminReviewError("Rating-ul trebuie să fie între 1 și 5.", 400);
+  }
+  return Math.round(numericValue);
+}
+
+function validateReviewStatus(status: string) {
+  if (
+    status !== "published"
+    && status !== "hidden_by_admin"
+    && status !== "deleted_by_admin"
+  ) {
+    throw new AdminReviewError("Status de review invalid.", 400);
+  }
+}
+
+async function loadReviewAdminListItem(reviewId: string, updated: Record<string, unknown>) {
+  const db = getAdminDb();
+  const bookingId = readString(updated.bookingId) || reviewId;
+  const userId = readString(updated.authorUserId);
+  const providerId = readString(updated.providerId);
+  const [bookingSnap, userSnap, providerSnap] = await Promise.all([
+    bookingId ? db.collection("bookings").doc(bookingId).get() : Promise.resolve(null),
+    userId ? db.collection("users").doc(userId).get() : Promise.resolve(null),
+    providerId ? db.collection("providers").doc(providerId).get() : Promise.resolve(null),
+  ]);
+
+  return toReviewItem(
+    {
+      reviewId,
+      ...updated,
+    },
+    bookingSnap && bookingSnap.exists ? (bookingSnap.data() as Record<string, unknown>) : null,
+    userSnap && userSnap.exists ? (userSnap.data() as Record<string, unknown>) : null,
+    providerSnap && providerSnap.exists
+      ? (providerSnap.data() as Record<string, unknown>)
+      : null
+  );
+}
+
+export async function updateAdminReview(
+  reviewIdInput: string,
+  payload: ReviewUpdatePayload,
+  actor: { uid: string }
+): Promise<ReviewAdminListItem> {
+  const reviewId = readString(reviewIdInput);
+  if (!reviewId) {
+    throw new AdminReviewError("Review id este obligatoriu.", 400);
+  }
+
+  const hasRating = payload.rating !== undefined;
+  const hasReview = payload.review !== undefined;
+  const hasStatus = payload.status !== undefined;
+  const hasNote = payload.note !== undefined;
+  if (!hasRating && !hasReview && !hasStatus && !hasNote) {
+    throw new AdminReviewError("Trimite cel puțin un câmp de actualizat.", 400);
+  }
+
+  const nextStatus = hasStatus ? readString(payload.status) : "";
+  if (hasStatus) {
+    validateReviewStatus(nextStatus);
+  }
+
+  const db = getAdminDb();
+  const reviewRef = db.collection("reviews").doc(reviewId);
+  const reviewSnap = await reviewRef.get();
+  if (!reviewSnap.exists) {
+    throw new AdminReviewError("Review-ul nu există.", 404);
+  }
+
+  const current = (reviewSnap.data() || {}) as Record<string, unknown>;
+  const currentStatus = readString(current.status);
+  const statusTo = hasStatus ? nextStatus : currentStatus;
+  if (currentStatus === "deleted_by_admin" && statusTo === "published") {
+    throw new AdminReviewError(
+      "Review-ul șters de admin nu poate fi republicat prin moderarea standard.",
+      400
+    );
+  }
+
+  const currentModeration =
+    (current.adminModeration as Record<string, unknown> | undefined) || {};
+  const noteValue = hasNote ? String(payload.note || "").trim() : readString(currentModeration.note);
+  const ratingTo = hasRating ? normalizeReviewRating(payload.rating) : readNumber(current.rating);
+  const reviewText = hasReview ? String(payload.review || "").trim() : readString(current.review);
+  const bookingId = readString(current.bookingId) || reviewId;
+  const now = Timestamp.now();
+
+  await reviewRef.set(
+    {
+      rating: ratingTo,
+      review: reviewText,
+      status: statusTo,
+      updatedAt: now,
+      updatedBy: actor.uid,
+      adminModeration: {
+        note: noteValue || null,
+        updatedBy: actor.uid,
+        updatedAt: now,
+      },
+    },
+    { merge: true }
+  );
+
+  if (hasRating && bookingId) {
+    await db.collection("bookings").doc(bookingId).set(
+      {
+        reviewSummary: {
+          reviewId,
+          rating: ratingTo,
+        },
+        updatedAt: now,
+        updatedBy: actor.uid,
+      },
+      { merge: true }
+    );
+  }
+
+  const auditRef = db.collection("auditEvents").doc();
+  await auditRef.set({
+    eventId: auditRef.id,
+    action: "review.admin.update",
+    actorUid: actor.uid,
+    actorRole: "admin",
+    resourceType: "review",
+    resourceId: reviewId,
+    statusFrom: currentStatus || null,
+    statusTo: statusTo || null,
+    result: "success",
+    context: {
+      bookingId,
+      providerId: readString(current.providerId) || null,
+      authorUserId: readString(current.authorUserId) || null,
+      note: noteValue || null,
+      rating: ratingTo,
+      reviewChanged: hasReview,
+      ratingChanged: hasRating,
+    },
+    createdAt: now,
+  });
+
+  const updatedSnap = await reviewRef.get();
+  const updated = (updatedSnap.data() || {}) as Record<string, unknown>;
+  return loadReviewAdminListItem(reviewId, updated);
 }
 
 export async function deleteAdminReview(

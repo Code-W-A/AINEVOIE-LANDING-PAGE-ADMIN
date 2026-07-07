@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Download, MoreHorizontal, Search, Trash2 } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { CheckCircle2, Download, MoreHorizontal, Search, Trash2, X } from "lucide-react";
 import { adminFetch, readAdminResponseError } from "@/components/admin/adminApi";
 import { AdminConfirmDialog } from "@/components/admin/AdminConfirmDialog";
 import { runAdminBulkDelete, useAdminBulkSelection } from "@/components/admin/useAdminBulkSelection";
@@ -10,6 +11,11 @@ import { useAdminData } from "@/components/admin/useAdminData";
 import { AdminEntityLookup } from "@/components/admin/AdminEntityLookup";
 import { AdminTableSkeleton } from "@/components/admin/AdminSkeletonLayouts";
 import { humanBookingLabel, humanProviderLabel, humanUserLabel } from "@/lib/adminHumanize";
+import {
+  formatPayoutRequestLinkLabel,
+  formatPayoutRequestShortId,
+} from "@/lib/adminPaymentLabels";
+import { tabTriggerClass } from "@/lib/adminBookingDetail";
 import { formatAdminDateTime } from "@/lib/formatAdminDateTime";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,6 +43,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TabContent, TabList, Tabs, TabTrigger } from "@/components/ui/tabs";
+
+const PLATI_TABS = {
+  plati: "plati",
+  payout: "payout",
+} as const;
+
+type PlatiTab = (typeof PLATI_TABS)[keyof typeof PLATI_TABS];
+
+function normalizePlatiTab(value: string | null): PlatiTab {
+  if (value === PLATI_TABS.payout) {
+    return PLATI_TABS.payout;
+  }
+  return PLATI_TABS.plati;
+}
+
+function buildPlatiPageUrl(tab: PlatiTab) {
+  return tab === PLATI_TABS.payout ? "/admin/plati?tab=payout" : "/admin/plati";
+}
 
 type PaymentWebhookState = "ok" | "delayed" | "missing";
 
@@ -123,6 +148,12 @@ type ProviderPayoutRequestAdminItem = {
 
 type ProviderPayoutRequestsResponse = {
   items: ProviderPayoutRequestAdminItem[];
+  pagination?: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
 };
 
 const paymentStatuses = ["unpaid", "authorizing", "in_progress", "authorized", "capturing", "paid", "failed", "released", "capture_failed"];
@@ -163,6 +194,10 @@ function formatMoneyValue(amount: number, currency = "RON") {
 }
 
 export default function AdminPaymentsPage() {
+  const router = useRouter();
+  const urlSearchParams = useSearchParams();
+  const urlTab = urlSearchParams.get("tab");
+  const [activeTab, setActiveTab] = useState<PlatiTab>(() => normalizePlatiTab(urlTab));
   const [q, setQ] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
   const [status, setStatus] = useState("all");
@@ -170,10 +205,14 @@ export default function AdminPaymentsPage() {
   const [userId, setUserId] = useState("");
   const [processorId, setProcessorId] = useState("");
   const [providerPayoutStatus, setProviderPayoutStatus] = useState("all");
+  const [payoutQ, setPayoutQ] = useState("");
+  const [debouncedPayoutQ, setDebouncedPayoutQ] = useState("");
   const [payoutRequestStatus, setPayoutRequestStatus] = useState("requested");
+  const [payoutProviderId, setPayoutProviderId] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(1);
+  const [payoutPage, setPayoutPage] = useState(1);
   const [deleteTarget, setDeleteTarget] = useState<PaymentAdminListItem | null>(null);
   const [pendingDeletePaymentId, setPendingDeletePaymentId] = useState<string | null>(null);
   const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
@@ -183,15 +222,68 @@ export default function AdminPaymentsPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [pendingMarkPaidRequestId, setPendingMarkPaidRequestId] = useState<string | null>(null);
 
+  const hasActiveFilters = Boolean(
+    q.trim()
+    || status !== "all"
+    || providerId.trim()
+    || userId.trim()
+    || processorId.trim()
+    || providerPayoutStatus !== "all"
+    || dateFrom
+    || dateTo
+  );
+
+  const hasActivePayoutFilters = Boolean(
+    payoutQ.trim()
+    || payoutRequestStatus !== "requested"
+    || payoutProviderId.trim()
+  );
+
+  function resetFilters() {
+    setPage(1);
+    setQ("");
+    setDebouncedQ("");
+    setStatus("all");
+    setProviderId("");
+    setUserId("");
+    setProcessorId("");
+    setProviderPayoutStatus("all");
+    setDateFrom("");
+    setDateTo("");
+  }
+
+  function resetPayoutFilters() {
+    setPayoutPage(1);
+    setPayoutQ("");
+    setDebouncedPayoutQ("");
+    setPayoutRequestStatus("requested");
+    setPayoutProviderId("");
+  }
+
+  function handleTabChange(nextTab: string) {
+    const normalizedTab = nextTab === PLATI_TABS.payout ? PLATI_TABS.payout : PLATI_TABS.plati;
+    setActiveTab(normalizedTab);
+    router.replace(buildPlatiPageUrl(normalizedTab));
+  }
+
+  useEffect(() => {
+    setActiveTab(normalizePlatiTab(urlTab));
+  }, [urlTab]);
+
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQ(q), 250);
     return () => clearTimeout(timer);
   }, [q]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedPayoutQ(payoutQ), 250);
+    return () => clearTimeout(timer);
+  }, [payoutQ]);
+
   const searchParams = useMemo(() => {
     const params = new URLSearchParams();
     params.set("page", String(page));
-    params.set("pageSize", "20");
+    params.set("pageSize", "5");
     if (debouncedQ.trim()) params.set("q", debouncedQ.trim());
     if (status !== "all") params.set("status", status);
     if (providerId.trim()) params.set("providerId", providerId.trim());
@@ -212,19 +304,31 @@ export default function AdminPaymentsPage() {
     [searchParams]
   );
 
-  const { data, loading, error, reload } = useAdminData<PaymentsResponse>(endpoint);
-  const payoutRequestsEndpoint = useMemo(
-    () => `/api/admin/provider-payout-requests?status=${encodeURIComponent(payoutRequestStatus)}`,
-    [payoutRequestStatus]
+  const { data, loading, error, reload } = useAdminData<PaymentsResponse>(
+    endpoint,
+    { enabled: activeTab === PLATI_TABS.plati },
   );
+  const payoutRequestsEndpoint = useMemo(() => {
+    const params = new URLSearchParams();
+    params.set("page", String(payoutPage));
+    params.set("pageSize", "5");
+    params.set("status", payoutRequestStatus);
+    if (debouncedPayoutQ.trim()) params.set("q", debouncedPayoutQ.trim());
+    if (payoutProviderId.trim()) params.set("providerId", payoutProviderId.trim());
+    return `/api/admin/provider-payout-requests?${params.toString()}`;
+  }, [debouncedPayoutQ, payoutPage, payoutProviderId, payoutRequestStatus]);
   const {
     data: payoutRequestsData,
     loading: payoutRequestsLoading,
     error: payoutRequestsError,
     reload: reloadPayoutRequests,
-  } = useAdminData<ProviderPayoutRequestsResponse>(payoutRequestsEndpoint);
+  } = useAdminData<ProviderPayoutRequestsResponse>(
+    payoutRequestsEndpoint,
+    { enabled: activeTab === PLATI_TABS.payout },
+  );
   const items = data?.items || [];
   const payoutRequests = payoutRequestsData?.items || [];
+  const payoutPagination = payoutRequestsData?.pagination;
   const pagination = data?.pagination;
   const truncated = Boolean(data?.meta?.truncated);
   const pageIds = useMemo(
@@ -335,7 +439,10 @@ export default function AdminPaymentsPage() {
         throw new Error(await readAdminResponseError(response, "Nu am putut marca payout-ul ca plătit."));
       }
 
-      await Promise.all([reload(), reloadPayoutRequests()]);
+      await reloadPayoutRequests();
+      if (activeTab === PLATI_TABS.plati) {
+        await reload();
+      }
     } catch (nextError) {
       setActionError(nextError instanceof Error ? nextError.message : "Nu am putut marca payout-ul ca plătit.");
     } finally {
@@ -346,16 +453,44 @@ export default function AdminPaymentsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Plati</h1>
-     
+        <h1 className="text-2xl font-semibold">Plăți</h1>
       </div>
 
+      {actionError ? <p className="text-sm text-rose-500">{actionError}</p> : null}
+
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
+        <TabList className="flex flex-wrap gap-2">
+          <TabTrigger
+            value={PLATI_TABS.plati}
+            className={tabTriggerClass(activeTab === PLATI_TABS.plati)}
+          >
+            Lista plăți
+          </TabTrigger>
+          <TabTrigger
+            value={PLATI_TABS.payout}
+            className={tabTriggerClass(activeTab === PLATI_TABS.payout)}
+          >
+            Cereri payout
+          </TabTrigger>
+        </TabList>
+
+        <TabContent value={PLATI_TABS.plati} className="mt-6 space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Filtre</CardTitle>
-          <CardDescription>
-            Caută după persoane, programare, serviciu sau referințe procesator.
-          </CardDescription>
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <CardTitle>Filtre</CardTitle>
+              <CardDescription>
+                Caută după persoane, programare, serviciu sau referințe procesator.
+              </CardDescription>
+            </div>
+            {hasActiveFilters ? (
+              <Button type="button" variant="outline" disabled={loading} onClick={resetFilters}>
+                <X className="mr-2 h-4 w-4" />
+                Resetează filtre
+              </Button>
+            ) : null}
+          </div>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-4">
           <div className="relative md:col-span-2">
@@ -455,143 +590,9 @@ export default function AdminPaymentsPage() {
 
       <Card>
         <CardHeader>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <CardTitle>Cereri payout provideri</CardTitle>
-              <CardDescription>
-                Providerii cer plata manuală din soldul disponibil. Confirmarea marchează plățile ca achitate către provider.
-              </CardDescription>
-            </div>
-            <select
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm disabled:opacity-60"
-              value={payoutRequestStatus}
-              disabled={payoutRequestsLoading}
-              onChange={(event) => setPayoutRequestStatus(event.target.value)}
-            >
-              <option value="requested">Requested</option>
-              <option value="paid">Paid</option>
-              <option value="all">Toate</option>
-            </select>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {payoutRequestsError && <p className="mb-4 text-sm text-rose-500">{payoutRequestsError}</p>}
-          {payoutRequestsLoading ? (
-            <AdminTableSkeleton rows={3} columns={7} />
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Request</TableHead>
-                  <TableHead>Provider</TableHead>
-                  <TableHead>Titular / IBAN</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Solicitat la</TableHead>
-                  <TableHead>Brut</TableHead>
-                  <TableHead>Comision</TableHead>
-                  <TableHead>Net provider</TableHead>
-                  <TableHead className="text-right">Acțiuni</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {payoutRequests.map((request) => (
-                  <TableRow key={request.requestId}>
-                    <TableCell>
-                      <Link
-                        href={`/admin/plati/payout/${encodeURIComponent(request.requestId)}`}
-                        className="font-medium underline underline-offset-2"
-                      >
-                        {request.requestId}
-                      </Link>
-                      <div className="text-xs text-muted-foreground">
-                        {request.paymentIds.length} plăți
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {request.providerId ? (
-                        <Link
-                          href={`/admin/prestatori/${encodeURIComponent(request.providerId)}`}
-                          className="underline underline-offset-2"
-                        >
-                          {humanProviderLabel({
-                            displayName: request.provider.displayName,
-                            email: request.provider.email,
-                          })}
-                        </Link>
-                      ) : (
-                        "-"
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">{request.payoutDetails.accountHolderName || "-"}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {request.payoutDetails.ibanLast4 ? `****${request.payoutDetails.ibanLast4}` : "IBAN lipsă"}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={payoutBadgeVariant(request.status)}>
-                        {label(request.status)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{formatAdminDateTime(request.requestedAt, { includeSeconds: true })}</TableCell>
-                    <TableCell>{formatMoneyValue(request.grossAmount, request.currency)}</TableCell>
-                    <TableCell>{formatMoneyValue(request.platformFeeAmount, request.currency)}</TableCell>
-                    <TableCell>{formatMoneyValue(request.providerNetAmount, request.currency)}</TableCell>
-                    <TableCell className="text-right align-middle">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8 shrink-0"
-                            disabled={pendingMarkPaidRequestId === request.requestId}
-                            aria-label="Acțiuni cerere payout"
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-52">
-                          <DropdownMenuItem asChild>
-                            <Link href={`/admin/plati/payout/${encodeURIComponent(request.requestId)}`}>
-                              Vezi detalii
-                            </Link>
-                          </DropdownMenuItem>
-                          {request.status === "requested" ? (
-                            <>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                disabled={pendingMarkPaidRequestId === request.requestId}
-                                onSelect={() => { void handleMarkPayoutPaid(request.requestId); }}
-                              >
-                                <CheckCircle2 className="mr-2 h-4 w-4" />
-                                Marchează plătit
-                              </DropdownMenuItem>
-                            </>
-                          ) : null}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {!payoutRequests.length && (
-                  <TableRow>
-                    <TableCell colSpan={9} className="py-8 text-center text-sm text-muted-foreground">
-                      Nu există cereri payout pentru filtrul selectat.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
           <div className="flex items-center justify-between gap-3">
             <div>
-              <CardTitle>Lista plati</CardTitle>
+              <CardTitle>Lista plăți</CardTitle>
               <CardDescription>
                 {pagination?.total || items.length} rezultate
                 {truncated ? " (limitate la primele 5000 pentru interogare)" : ""}
@@ -623,7 +624,6 @@ export default function AdminPaymentsPage() {
               {bulkActionSummary}
             </p>
           ) : null}
-          {actionError && <p className="mb-4 text-sm text-rose-500">{actionError}</p>}
           {loading ? (
             <AdminTableSkeleton rows={10} columns={17} />
           ) : (
@@ -636,6 +636,7 @@ export default function AdminPaymentsPage() {
                       onChange={(event) => toggleSelectAll(event.target.checked)}
                     />
                   </TableHead>
+                  <TableHead className="w-12">Acțiuni</TableHead>
                   <TableHead>Payment</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Creat la</TableHead>
@@ -651,7 +652,6 @@ export default function AdminPaymentsPage() {
                   <TableHead>Booking</TableHead>
                   <TableHead>User</TableHead>
                   <TableHead>Provider</TableHead>
-                  <TableHead className="text-right">Acțiuni</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -662,6 +662,45 @@ export default function AdminPaymentsPage() {
                         checked={selectedIds.has(item.paymentId)}
                         onChange={(event) => toggleRow(item.paymentId, event.target.checked)}
                       />
+                    </TableCell>
+                    <TableCell className="w-12 align-middle">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8 shrink-0"
+                            disabled={Boolean(pendingDeletePaymentId) || pendingBulkDelete}
+                            aria-label="Acțiuni plată"
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-52">
+                          <DropdownMenuItem
+                            asChild
+                            disabled={!item.bookingId}
+                          >
+                            {item.bookingId ? (
+                              <Link href={`/admin/programari/${encodeURIComponent(item.bookingId)}`}>
+                                Detalii booking
+                              </Link>
+                            ) : (
+                              <span>Detalii booking</span>
+                            )}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                            disabled={Boolean(pendingDeletePaymentId)}
+                            onSelect={() => setDeleteTarget(item)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Șterge plată
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                     <TableCell>
                       <div className="font-medium">
@@ -751,45 +790,6 @@ export default function AdminPaymentsPage() {
                         "-"
                       )}
                     </TableCell>
-                    <TableCell className="text-right align-middle">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8 shrink-0"
-                            disabled={Boolean(pendingDeletePaymentId) || pendingBulkDelete}
-                            aria-label="Acțiuni plată"
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-52">
-                          <DropdownMenuItem
-                            asChild
-                            disabled={!item.bookingId}
-                          >
-                            {item.bookingId ? (
-                              <Link href={`/admin/programari/${encodeURIComponent(item.bookingId)}`}>
-                                Detalii booking
-                              </Link>
-                            ) : (
-                              <span>Detalii booking</span>
-                            )}
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-                            disabled={Boolean(pendingDeletePaymentId)}
-                            onSelect={() => setDeleteTarget(item)}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Șterge plată
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
                   </TableRow>
                 ))}
                 {!items.length && (
@@ -803,10 +803,12 @@ export default function AdminPaymentsPage() {
             </Table>
           )}
 
-          {pagination && pagination.totalPages > 1 && (
-            <div className="mt-4 flex items-center justify-between">
+          {pagination && items.length > 0 ? (
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm text-muted-foreground">
                 Pagina {pagination.page} din {pagination.totalPages}
+                {" · "}
+                {pagination.total} rezultate
               </p>
               <div className="flex gap-2">
                 <Button
@@ -814,20 +816,237 @@ export default function AdminPaymentsPage() {
                   disabled={loading || page <= 1}
                   onClick={() => setPage((current) => Math.max(1, current - 1))}
                 >
-                  Inapoi
+                  Înapoi
                 </Button>
                 <Button
                   variant="outline"
                   disabled={loading || page >= pagination.totalPages}
                   onClick={() => setPage((current) => current + 1)}
                 >
-                  Inainte
+                  Înainte
                 </Button>
               </div>
             </div>
-          )}
+          ) : null}
         </CardContent>
       </Card>
+        </TabContent>
+
+        <TabContent value={PLATI_TABS.payout} className="mt-6 space-y-6">
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <CardTitle>Filtre</CardTitle>
+              <CardDescription>
+                Caută după cerere, provider sau date bancare.
+              </CardDescription>
+            </div>
+            {hasActivePayoutFilters ? (
+              <Button type="button" variant="outline" disabled={payoutRequestsLoading} onClick={resetPayoutFilters}>
+                <X className="mr-2 h-4 w-4" />
+                Resetează filtre
+              </Button>
+            ) : null}
+          </div>
+        </CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-4">
+          <div className="relative md:col-span-2">
+            <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              className="pl-9"
+              placeholder="Cautare"
+              value={payoutQ}
+              disabled={payoutRequestsLoading}
+              onChange={(event) => {
+                setPayoutPage(1);
+                setPayoutQ(event.target.value);
+              }}
+            />
+          </div>
+          <select
+            className="h-9 rounded-md border border-input bg-background px-3 text-sm disabled:opacity-60"
+            value={payoutRequestStatus}
+            disabled={payoutRequestsLoading}
+            onChange={(event) => {
+              setPayoutPage(1);
+              setPayoutRequestStatus(event.target.value);
+            }}
+          >
+            <option value="requested">Solicitate</option>
+            <option value="paid">Plătite</option>
+            <option value="all">Toate</option>
+          </select>
+          <AdminEntityLookup
+            value={payoutProviderId}
+            entityType="provider"
+            disabled={payoutRequestsLoading}
+            placeholder="Provider"
+            onValueChange={(nextValue) => {
+              setPayoutPage(1);
+              setPayoutProviderId(nextValue);
+            }}
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div>
+            <CardTitle>Cereri payout provideri</CardTitle>
+            <CardDescription>
+              {payoutPagination?.total || payoutRequests.length} rezultate
+            </CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {payoutRequestsError && <p className="mb-4 text-sm text-rose-500">{payoutRequestsError}</p>}
+          {payoutRequestsLoading ? (
+            <AdminTableSkeleton rows={3} columns={7} />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12">Acțiuni</TableHead>
+                  <TableHead>Cerere</TableHead>
+                  <TableHead>Provider</TableHead>
+                  <TableHead>Titular / IBAN</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Solicitat la</TableHead>
+                  <TableHead>Brut</TableHead>
+                  <TableHead>Comision</TableHead>
+                  <TableHead>Net provider</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {payoutRequests.map((request) => (
+                  <TableRow key={request.requestId}>
+                    <TableCell className="w-12 align-middle">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8 shrink-0"
+                            disabled={pendingMarkPaidRequestId === request.requestId}
+                            aria-label="Acțiuni cerere payout"
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-52">
+                          <DropdownMenuItem asChild>
+                            <Link href={`/admin/plati/payout/${encodeURIComponent(request.requestId)}`}>
+                              Vezi detalii
+                            </Link>
+                          </DropdownMenuItem>
+                          {request.status === "requested" ? (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                disabled={pendingMarkPaidRequestId === request.requestId}
+                                onSelect={() => { void handleMarkPayoutPaid(request.requestId); }}
+                              >
+                                <CheckCircle2 className="mr-2 h-4 w-4" />
+                                Marchează plătit
+                              </DropdownMenuItem>
+                            </>
+                          ) : null}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                    <TableCell>
+                      <Link
+                        href={`/admin/plati/payout/${encodeURIComponent(request.requestId)}`}
+                        className="font-medium underline underline-offset-2"
+                      >
+                        {formatPayoutRequestLinkLabel({
+                          providerNetAmount: request.providerNetAmount,
+                          currency: request.currency,
+                          requestedAtLabel: formatAdminDateTime(request.requestedAt, { includeSeconds: true }),
+                        })}
+                      </Link>
+                      <div className="text-xs text-muted-foreground">
+                        {request.paymentIds.length} plăți
+                      </div>
+                      <div className="font-mono text-xs text-muted-foreground">
+                        ID {formatPayoutRequestShortId(request.requestId)}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {request.providerId ? (
+                        <Link
+                          href={`/admin/prestatori/${encodeURIComponent(request.providerId)}`}
+                          className="underline underline-offset-2"
+                        >
+                          {humanProviderLabel({
+                            displayName: request.provider.displayName,
+                            email: request.provider.email,
+                          })}
+                        </Link>
+                      ) : (
+                        "-"
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">{request.payoutDetails.accountHolderName || "-"}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {request.payoutDetails.ibanLast4 ? `****${request.payoutDetails.ibanLast4}` : "IBAN lipsă"}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={payoutBadgeVariant(request.status)}>
+                        {label(request.status)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{formatAdminDateTime(request.requestedAt, { includeSeconds: true })}</TableCell>
+                    <TableCell>{formatMoneyValue(request.grossAmount, request.currency)}</TableCell>
+                    <TableCell>{formatMoneyValue(request.platformFeeAmount, request.currency)}</TableCell>
+                    <TableCell>{formatMoneyValue(request.providerNetAmount, request.currency)}</TableCell>
+                  </TableRow>
+                ))}
+                {!payoutRequests.length && (
+                  <TableRow>
+                    <TableCell colSpan={9} className="py-8 text-center text-sm text-muted-foreground">
+                      Nu există cereri payout pentru filtrul selectat.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
+
+          {payoutPagination && payoutRequests.length > 0 ? (
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-muted-foreground">
+                Pagina {payoutPagination.page} din {payoutPagination.totalPages}
+                {" · "}
+                {payoutPagination.total} rezultate
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  disabled={payoutRequestsLoading || payoutPage <= 1}
+                  onClick={() => setPayoutPage((current) => Math.max(1, current - 1))}
+                >
+                  Înapoi
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={payoutRequestsLoading || payoutPage >= payoutPagination.totalPages}
+                  onClick={() => setPayoutPage((current) => current + 1)}
+                >
+                  Înainte
+                </Button>
+              </div>
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
+        </TabContent>
+      </Tabs>
+
       <AdminConfirmDialog
         open={Boolean(deleteTarget)}
         onOpenChange={(open) => {

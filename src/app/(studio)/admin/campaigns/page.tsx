@@ -1698,6 +1698,7 @@ export default function CampaignsPage() {
                         onChange={(event) => toggleSelectAll(event.target.checked)}
                       />
                     </TableHead>
+                    <TableHead className="w-12">Acțiuni</TableHead>
                     <TableHead>Subiect</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Destinatari</TableHead>
@@ -1705,7 +1706,6 @@ export default function CampaignsPage() {
                     <TableHead>Eșuate</TableHead>
                     <TableHead>Programare</TableHead>
                     <TableHead>Creată</TableHead>
-                    <TableHead>Acțiuni</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1729,33 +1729,7 @@ export default function CampaignsPage() {
                             disabled={!id}
                           />
                         </TableCell>
-                        <TableCell className="font-medium">
-                          <div className="flex min-w-0 flex-wrap items-center gap-2">
-                            <span className="min-w-0 break-words">
-                              {campaign.subject || campaign.name}
-                            </span>
-                            {id && isRowActionLoading(id, "duplicate") && (
-                              <Badge variant="secondary">Se copiază...</Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={campaignBadgeVariant(status)}>
-                            {campaignStatusLabel(campaign.status)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{campaign.stats?.total ?? campaign.recipients ?? "-"}</TableCell>
-                        <TableCell>{campaign.stats?.sent ?? campaign.sent ?? "-"}</TableCell>
-                        <TableCell>{campaign.stats?.failed ?? campaign.failed ?? "-"}</TableCell>
-                        <TableCell>
-                          {campaign.scheduledAt ?
-                            formatAdminDateTime(campaign.scheduledAt)
-                          : "-"}
-                        </TableCell>
-                        <TableCell>
-                          {formatAdminDateTime(campaign.createdAt)}
-                        </TableCell>
-                        <TableCell className="text-right align-middle">
+                        <TableCell className="w-12 align-middle">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button
@@ -1769,7 +1743,7 @@ export default function CampaignsPage() {
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-52">
+                            <DropdownMenuContent align="start" className="w-52">
                               {id && (
                                 <DropdownMenuItem asChild>
                                   <Link href={`/admin/campaigns/${id}`}>
@@ -1851,6 +1825,32 @@ export default function CampaignsPage() {
                               )}
                             </DropdownMenuContent>
                           </DropdownMenu>
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          <div className="flex min-w-0 flex-wrap items-center gap-2">
+                            <span className="min-w-0 break-words">
+                              {campaign.subject || campaign.name}
+                            </span>
+                            {id && isRowActionLoading(id, "duplicate") && (
+                              <Badge variant="secondary">Se copiază...</Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={campaignBadgeVariant(status)}>
+                            {campaignStatusLabel(campaign.status)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{campaign.stats?.total ?? campaign.recipients ?? "-"}</TableCell>
+                        <TableCell>{campaign.stats?.sent ?? campaign.sent ?? "-"}</TableCell>
+                        <TableCell>{campaign.stats?.failed ?? campaign.failed ?? "-"}</TableCell>
+                        <TableCell>
+                          {campaign.scheduledAt ?
+                            formatAdminDateTime(campaign.scheduledAt)
+                          : "-"}
+                        </TableCell>
+                        <TableCell>
+                          {formatAdminDateTime(campaign.createdAt)}
                         </TableCell>
                       </TableRow>
                     );

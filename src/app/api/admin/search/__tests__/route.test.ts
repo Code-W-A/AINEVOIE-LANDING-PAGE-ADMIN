@@ -130,7 +130,7 @@ describe("admin global search route", () => {
         }),
         expect.objectContaining({
           type: "conversations",
-          items: [expect.objectContaining({ href: "/admin/conversatii?conversationId=conv_bk_bk_123" })],
+          items: [expect.objectContaining({ href: "/admin/conversatii/conv_bk_bk_123" })],
         }),
       ])
     );

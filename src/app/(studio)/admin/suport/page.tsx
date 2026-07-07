@@ -10,6 +10,13 @@ import { runAdminBulkDelete, useAdminBulkSelection } from "@/components/admin/us
 import { AdminEntityLookup } from "@/components/admin/AdminEntityLookup";
 import { AdminTableSkeleton } from "@/components/admin/AdminSkeletonLayouts";
 import { humanAdminLabel, humanProviderLabel, humanUserLabel } from "@/lib/adminHumanize";
+import {
+  formatSupportTicketPriorityLabel,
+  formatSupportTicketRoleLabel,
+  formatSupportTicketSlaAge,
+  formatSupportTicketStatusLabel,
+  formatSupportTicketTopicLabel,
+} from "@/lib/adminSupportTicketLabels";
 import { formatAdminDateTime } from "@/lib/formatAdminDateTime";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -105,10 +112,6 @@ const statuses: SupportTicketStatus[] = ["open", "in_progress", "waiting_user", 
 const priorities: SupportTicketPriority[] = ["low", "normal", "high", "urgent"];
 const topics: SupportTicketTopic[] = ["support", "bug"];
 
-function label(value?: string | null) {
-  return value ? value.replaceAll("_", " ") : "-";
-}
-
 function statusVariant(status: string) {
   if (status === "open") return "warning";
   if (status === "in_progress") return "default";
@@ -123,23 +126,6 @@ function priorityVariant(priority: string) {
   if (priority === "high") return "warning";
   if (priority === "normal") return "outline";
   return "secondary";
-}
-
-function formatSlaAge(ageMinutes: number) {
-  if (!Number.isFinite(ageMinutes) || ageMinutes <= 0) {
-    return "0m";
-  }
-  if (ageMinutes < 60) {
-    return `${ageMinutes}m`;
-  }
-  const hours = Math.floor(ageMinutes / 60);
-  const minutes = ageMinutes % 60;
-  if (hours < 24) {
-    return `${hours}h ${minutes}m`;
-  }
-  const days = Math.floor(hours / 24);
-  const remainingHours = hours % 24;
-  return `${days}d ${remainingHours}h`;
 }
 
 function requesterHref(item: SupportTicketListItem) {
@@ -243,14 +229,14 @@ export default function AdminSupportTicketsPage() {
       });
 
       if (!response.ok) {
-        throw new Error(await readAdminResponseError(response, "Nu am putut șterge ticket-ul de suport."));
+        throw new Error(await readAdminResponseError(response, "Nu am putut șterge tichetul de suport."));
       }
 
       setDeleteTarget(null);
       await reload();
       return true;
     } catch (nextError) {
-      setActionError(nextError instanceof Error ? nextError.message : "Nu am putut șterge ticket-ul de suport.");
+      setActionError(nextError instanceof Error ? nextError.message : "Nu am putut șterge tichetul de suport.");
       return false;
     } finally {
       setPendingDeleteTicketId(null);
@@ -276,7 +262,7 @@ export default function AdminSupportTicketsPage() {
         if (!response.ok) {
           return {
             ok: false as const,
-            message: await readAdminResponseError(response, "Nu am putut șterge ticket-ul de suport."),
+            message: await readAdminResponseError(response, "Nu am putut șterge tichetul de suport."),
           };
         }
         return { ok: true as const };
@@ -308,14 +294,14 @@ export default function AdminSupportTicketsPage() {
       <div>
         <h1 className="text-2xl font-semibold">Suport</h1>
         <p className="text-sm text-muted-foreground">
-          Ticketing operațional pentru suport și bug reports din aplicația mobilă.
+          Ticketing operațional pentru suport și rapoarte de erori din aplicația mobilă.
         </p>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Filtre</CardTitle>
-          <CardDescription>Caută după ticket, subiect, requester, assignee sau entități legate.</CardDescription>
+          <CardDescription>Caută după tichet, subiect, solicitant, responsabil sau entități legate.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-4">
           <div className="relative md:col-span-2">
@@ -344,7 +330,7 @@ export default function AdminSupportTicketsPage() {
             <option value="all">Toate statusurile</option>
             {statuses.map((item) => (
               <option key={item} value={item}>
-                {label(item)}
+                {formatSupportTicketStatusLabel(item)}
               </option>
             ))}
           </select>
@@ -361,7 +347,7 @@ export default function AdminSupportTicketsPage() {
             <option value="all">Toate prioritățile</option>
             {priorities.map((item) => (
               <option key={item} value={item}>
-                {label(item)}
+                {formatSupportTicketPriorityLabel(item)}
               </option>
             ))}
           </select>
@@ -378,7 +364,7 @@ export default function AdminSupportTicketsPage() {
             <option value="all">Toate topicurile</option>
             {topics.map((item) => (
               <option key={item} value={item}>
-                {label(item)}
+                {formatSupportTicketTopicLabel(item)}
               </option>
             ))}
           </select>
@@ -387,7 +373,7 @@ export default function AdminSupportTicketsPage() {
             value={assignedAdminUid}
             entityType="admin"
             disabled={loading}
-            placeholder="Assignee admin"
+            placeholder="Admin responsabil"
             onValueChange={(nextValue) => {
               setPage(1);
               setAssignedAdminUid(nextValue);
@@ -398,7 +384,7 @@ export default function AdminSupportTicketsPage() {
             value={requesterUid}
             entityType={["user", "provider"]}
             disabled={loading}
-            placeholder="Requester (user/provider)"
+            placeholder="Solicitant (utilizator/prestator)"
             onValueChange={(nextValue) => {
               setPage(1);
               setRequesterUid(nextValue);
@@ -415,9 +401,10 @@ export default function AdminSupportTicketsPage() {
               setRelatedEntityId("");
             }}
           >
-            <option value="booking">Related booking</option>
-            <option value="provider">Related provider</option>
-            <option value="user">Related user</option>
+            <option value="booking">Programare asociată</option>
+            <option value="provider">Prestator asociat</option>
+            <option value="user">Utilizator asociat</option>
+            <option value="user">Utilizator asociat</option>
           </select>
 
           <AdminEntityLookup
@@ -495,16 +482,16 @@ export default function AdminSupportTicketsPage() {
                       onChange={(event) => toggleSelectAll(event.target.checked)}
                     />
                   </TableHead>
-                  <TableHead>Ticket</TableHead>
-                  <TableHead>Topic</TableHead>
+                  <TableHead className="w-12">Acțiuni</TableHead>
+                  <TableHead>Tichet</TableHead>
+                  <TableHead>Tip</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Prioritate</TableHead>
-                  <TableHead>Requester</TableHead>
-                  <TableHead>Assignee</TableHead>
-                  <TableHead>Related</TableHead>
-                  <TableHead>SLA age</TableHead>
-                  <TableHead>Updated</TableHead>
-                  <TableHead className="text-right">Acțiuni</TableHead>
+                  <TableHead>Solicitant</TableHead>
+                  <TableHead>Responsabil</TableHead>
+                  <TableHead>Asociat</TableHead>
+                  <TableHead>Vechime SLA</TableHead>
+                  <TableHead>Actualizat</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -516,6 +503,38 @@ export default function AdminSupportTicketsPage() {
                         onChange={(event) => toggleRow(item.ticketId, event.target.checked)}
                       />
                     </TableCell>
+                    <TableCell className="w-12 align-top">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8 shrink-0"
+                            disabled={Boolean(pendingDeleteTicketId) || pendingBulkDelete}
+                            aria-label="Acțiuni tichet"
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-52">
+                          <DropdownMenuItem asChild>
+                            <Link href={`/admin/suport/${encodeURIComponent(item.ticketId)}`}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              Vezi tichet
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                            disabled={Boolean(pendingDeleteTicketId)}
+                            onSelect={() => setDeleteTarget(item)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Șterge tichet
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
                     <TableCell className="max-w-[220px] align-top">
                       <p className="font-medium">{item.ticketId}</p>
                       <p className="line-clamp-2 text-xs text-muted-foreground">{item.subject || "-"}</p>
@@ -524,13 +543,13 @@ export default function AdminSupportTicketsPage() {
                       </p>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">{label(item.topic)}</Badge>
+                      <Badge variant="outline">{formatSupportTicketTopicLabel(item.topic)}</Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={statusVariant(item.status)}>{label(item.status)}</Badge>
+                      <Badge variant={statusVariant(item.status)}>{formatSupportTicketStatusLabel(item.status)}</Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={priorityVariant(item.priority)}>{label(item.priority)}</Badge>
+                      <Badge variant={priorityVariant(item.priority)}>{formatSupportTicketPriorityLabel(item.priority)}</Badge>
                     </TableCell>
                     <TableCell className="align-top">
                       <Link
@@ -547,7 +566,7 @@ export default function AdminSupportTicketsPage() {
                             email: item.requester.email,
                           })}
                       </Link>
-                      <p className="text-xs text-muted-foreground">{item.requester.role}</p>
+                      <p className="text-xs text-muted-foreground">{formatSupportTicketRoleLabel(item.requester.role)}</p>
                     </TableCell>
                     <TableCell className="align-top">
                       {item.assignedAdminUid ? (
@@ -568,7 +587,7 @@ export default function AdminSupportTicketsPage() {
                             href={`/admin/programari/${encodeURIComponent(item.relatedEntity.bookingId)}`}
                             className="block underline underline-offset-2"
                           >
-                            booking: {item.relatedBooking?.status ? label(item.relatedBooking.status) : "Programare"}
+                            Programare: {item.relatedBooking?.status || "—"}
                             <span className="ml-1 text-muted-foreground">({item.relatedEntity.bookingId})</span>
                           </Link>
                         ) : null}
@@ -577,7 +596,7 @@ export default function AdminSupportTicketsPage() {
                             href={`/admin/prestatori/${encodeURIComponent(item.relatedEntity.providerId)}`}
                             className="block underline underline-offset-2"
                           >
-                            provider: {humanProviderLabel({
+                            Prestator: {humanProviderLabel({
                               displayName: item.relatedProvider?.displayName,
                               email: item.relatedProvider?.email,
                             })}
@@ -589,7 +608,7 @@ export default function AdminSupportTicketsPage() {
                             href={`/admin/utilizatori/${encodeURIComponent(item.relatedEntity.userId)}`}
                             className="block underline underline-offset-2"
                           >
-                            user: {humanUserLabel({
+                            Utilizator: {humanUserLabel({
                               displayName: item.relatedUser?.displayName,
                               email: item.relatedUser?.email,
                             })}
@@ -603,40 +622,8 @@ export default function AdminSupportTicketsPage() {
                           : null}
                       </div>
                     </TableCell>
-                    <TableCell>{formatSlaAge(item.slaAgeMinutes)}</TableCell>
+                    <TableCell>{formatSupportTicketSlaAge(item.slaAgeMinutes)}</TableCell>
                     <TableCell>{formatAdminDateTime(item.updatedAt || item.createdAt, { includeSeconds: true })}</TableCell>
-                    <TableCell className="text-right align-top">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8 shrink-0"
-                            disabled={Boolean(pendingDeleteTicketId) || pendingBulkDelete}
-                            aria-label="Acțiuni ticket"
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-52">
-                          <DropdownMenuItem asChild>
-                            <Link href={`/admin/suport/${encodeURIComponent(item.ticketId)}`}>
-                              <Eye className="mr-2 h-4 w-4" />
-                              Vezi ticket
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-                            disabled={Boolean(pendingDeleteTicketId)}
-                            onSelect={() => setDeleteTarget(item)}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Șterge ticket
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
                   </TableRow>
                 ))}
 
@@ -684,15 +671,15 @@ export default function AdminSupportTicketsPage() {
             setDeleteTarget(null);
           }
         }}
-        title="Ștergi acest ticket?"
+        title="Ștergi acest tichet?"
         description={
           <div className="space-y-2">
-            <p>Acțiunea este ireversibilă și șterge documentul ticket din Firestore.</p>
+            <p>Acțiunea este ireversibilă și șterge documentul tichetului din Firestore.</p>
             {deleteTarget ? (
               <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
                 <div className="font-medium text-foreground">{deleteTarget.ticketId}</div>
-                <div>Status: {label(deleteTarget.status)}</div>
-                <div>Prioritate: {label(deleteTarget.priority)}</div>
+                <div>Status: {formatSupportTicketStatusLabel(deleteTarget.status)}</div>
+                <div>Prioritate: {formatSupportTicketPriorityLabel(deleteTarget.priority)}</div>
               </div>
             ) : null}
           </div>

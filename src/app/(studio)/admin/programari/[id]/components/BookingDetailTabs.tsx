@@ -12,13 +12,11 @@ import { BookingActivityTab } from "./tabs/BookingActivityTab";
 import { BookingPartiesTab } from "./tabs/BookingPartiesTab";
 import { BookingPaymentTab } from "./tabs/BookingPaymentTab";
 import { BookingSummaryTab } from "./tabs/BookingSummaryTab";
-import { BookingSupportTab } from "./tabs/BookingSupportTab";
 
 const TABS = {
   summary: "rezumat",
   parties: "client-prestator",
   payment: "plata",
-  support: "conversatie-suport",
   activity: "activitate",
 } as const;
 
@@ -27,20 +25,12 @@ export function BookingDetailTabs({
   payment,
   user,
   provider,
-  conversation,
-  conversationId,
-  supportTickets,
-  review,
   timelineEvents,
 }: {
   booking: BookingDocument;
   payment: PaymentDocument | null;
   user?: Record<string, unknown> | null;
   provider?: Record<string, unknown> | null;
-  conversation?: Record<string, unknown> | null;
-  conversationId: string;
-  supportTickets: Array<Record<string, unknown>>;
-  review?: Record<string, unknown> | null;
   timelineEvents: BookingTimelineEvent[];
 }) {
   const [activeTab, setActiveTab] = useState<string>(TABS.summary);
@@ -57,9 +47,6 @@ export function BookingDetailTabs({
         <TabTrigger value={TABS.payment} className={tabTriggerClass(activeTab === TABS.payment)}>
           Plată
         </TabTrigger>
-        <TabTrigger value={TABS.support} className={tabTriggerClass(activeTab === TABS.support)}>
-          Conversație &amp; suport
-        </TabTrigger>
         <TabTrigger value={TABS.activity} className={tabTriggerClass(activeTab === TABS.activity)}>
           Activitate
         </TabTrigger>
@@ -75,15 +62,6 @@ export function BookingDetailTabs({
 
       <TabContent value={TABS.payment} className="mt-6">
         <BookingPaymentTab payment={payment} />
-      </TabContent>
-
-      <TabContent value={TABS.support} className="mt-6">
-        <BookingSupportTab
-          conversation={conversation}
-          conversationId={conversationId}
-          supportTickets={supportTickets}
-          review={review}
-        />
       </TabContent>
 
       <TabContent value={TABS.activity} className="mt-6">
