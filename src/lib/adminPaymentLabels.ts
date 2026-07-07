@@ -18,7 +18,7 @@ export function formatPayoutRequestLinkLabel(params: {
   return params.requestedAtLabel ? `${amount} · ${params.requestedAtLabel}` : amount;
 }
 
-export function formatPayoutRequestMoney(amount: number, currency = "RON") {
+export function formatPayoutRequestMoney(amount: number, currency?: string | null) {
   if (!Number.isFinite(amount) || amount <= 0) {
     return "-";
   }
