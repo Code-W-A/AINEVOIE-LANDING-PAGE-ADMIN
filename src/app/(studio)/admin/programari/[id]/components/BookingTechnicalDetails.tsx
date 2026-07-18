@@ -41,14 +41,14 @@ export function BookingTechnicalDetails({
           <FieldValue label="Service ID" value={formatCompactValue(booking.serviceId)} />
           <FieldValue label="Timezone" value={formatCompactValue(booking.timezone)} />
           <FieldValue label="Status brut" value={formatCompactValue(booking.status)} />
-          <FieldValue label="SLA profile" value={formatCompactValue(booking.requestResponse?.profile)} />
+          <FieldValue label="Profil răspuns" value={formatCompactValue(booking.requestResponse?.profile)} />
           <FieldValue
-            label="SLA status brut"
+            label="Status răspuns brut"
             value={formatCompactValue(booking.requestResponse?.status)}
           />
           <FieldValue
-            label="Deadline răspuns"
-            value={formatAdminDateTime(booking.requestResponse?.deadlineAt)}
+            label="Expirare automată"
+            value="Dezactivată"
           />
         </div>
 

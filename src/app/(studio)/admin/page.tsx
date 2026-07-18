@@ -7,7 +7,6 @@ import {
   BriefcaseBusiness,
   CalendarClock,
   Clock3,
-  CreditCard,
   LifeBuoy,
   MessageSquare,
   RotateCw,
@@ -42,7 +41,6 @@ type DashboardResponse = {
     requestedBookings?: DashboardQueue;
     overdueBookingRequests?: DashboardQueue;
     rescheduleBookings?: DashboardQueue;
-    failedPaymentBookings?: DashboardQueue;
     urgentSupportTickets?: DashboardQueue;
     flaggedConversations?: DashboardQueue;
   };
@@ -509,7 +507,6 @@ export default function AdminOperationalDashboardPage() {
   const requestedBookings = readItems(data?.queues?.requestedBookings);
   const overdueBookingRequests = readItems(data?.queues?.overdueBookingRequests);
   const rescheduleBookings = readItems(data?.queues?.rescheduleBookings);
-  const failedPaymentBookings = readItems(data?.queues?.failedPaymentBookings);
   const urgentSupportTickets = readItems(data?.queues?.urgentSupportTickets);
   const flaggedConversations = readItems(data?.queues?.flaggedConversations);
   const lastUpdated = data?.generatedAt || readString(summary.generatedAt);
@@ -517,7 +514,6 @@ export default function AdminOperationalDashboardPage() {
   const requestedBookingsTotal = queueTotal(data?.queues?.requestedBookings, requestedBookings);
   const overdueBookingsTotal = queueTotal(data?.queues?.overdueBookingRequests, overdueBookingRequests);
   const rescheduleBookingsTotal = queueTotal(data?.queues?.rescheduleBookings, rescheduleBookings);
-  const failedPaymentsTotal = queueTotal(data?.queues?.failedPaymentBookings, failedPaymentBookings);
   const urgentSupportTotal = queueTotal(data?.queues?.urgentSupportTickets, urgentSupportTickets);
   const flaggedConversationsTotal = queueTotal(data?.queues?.flaggedConversations, flaggedConversations);
 
@@ -532,7 +528,7 @@ export default function AdminOperationalDashboardPage() {
             <CardDescription>Zonele care cer decizii rapide.</CardDescription>
           </CardHeader>
           <CardContent>
-            <AdminTableSkeleton rows={5} columns={5} />
+            <AdminTableSkeleton rows={4} columns={4} />
           </CardContent>
         </Card>
       </div>
@@ -590,18 +586,12 @@ export default function AdminOperationalDashboardPage() {
           note="programări care cer răspuns"
           variant={priorityTone(requestedBookingsTotal)}
         />
-        <KpiCard
-          icon={CreditCard}
-          label="Probleme la plată"
-          value={failedPaymentsTotal}
-          note="necesită verificare"
-          variant={riskTone(failedPaymentsTotal)}
-        />
+
         <KpiCard
           icon={LifeBuoy}
-          label="Suport urgent"
+          label="Suport"
           value={urgentSupportTotal}
-          note="tichete active cu prioritate urgent"
+          note="tichete active"
           variant={riskTone(urgentSupportTotal)}
         />
       </div>
@@ -614,7 +604,7 @@ export default function AdminOperationalDashboardPage() {
               description="Aceste zone cer decizie sau verificare rapidă."
             />
           </CardHeader>
-          <CardContent className="grid gap-4 p-6 sm:grid-cols-2 xl:grid-cols-4">
+          <CardContent className="grid gap-4 p-6 sm:grid-cols-2 xl:grid-cols-3">
             <ActionCard
               icon={ShieldCheck}
               title="Prestatori în așteptare"
@@ -635,21 +625,12 @@ export default function AdminOperationalDashboardPage() {
             />
             <ActionCard
               icon={Clock3}
-              title="Necesită răspuns"
+              title="În așteptarea prestatorului"
               value={overdueBookingsTotal}
-              summary="Cereri care întârzie și pot afecta experiența clientului."
+              summary="Cereri active care așteaptă răspuns și nu expiră automat."
               href="/admin/programari?status=requested"
-              cta="Verifică întârzierile"
-              tone={riskTone(overdueBookingsTotal)}
-            />
-            <ActionCard
-              icon={CreditCard}
-              title="Probleme la plată"
-              value={failedPaymentsTotal}
-              summary="Plăți care au nevoie de verificare sau contact cu clientul."
-              href="/admin/programari?paymentStatus=failed"
-              cta="Vezi plățile"
-              tone={riskTone(failedPaymentsTotal)}
+              cta="Vezi cererile"
+              tone={priorityTone(overdueBookingsTotal)}
             />
           </CardContent>
         </Card>
@@ -684,29 +665,16 @@ export default function AdminOperationalDashboardPage() {
           </PreviewCard>
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-3">
+        <div className="grid gap-6 xl:grid-cols-2">
           <PreviewCard
-            title="Necesită răspuns"
-            description={`${overdueBookingsTotal} cereri fără răspuns rapid.`}
+            title="În așteptarea prestatorului"
+            description={`${overdueBookingsTotal} cereri active, fără expirare automată.`}
             href="/admin/programari?status=requested"
-            hrefLabel="Vezi întârzierile"
+            hrefLabel="Vezi cererile"
           >
             <BookingPreview
               items={overdueBookingRequests}
-              emptyMessage="Nu există cereri întârziate peste timpul dorit de răspuns."
-            />
-          </PreviewCard>
-
-          <PreviewCard
-            title="Plăți cu probleme"
-            description={`${failedPaymentsTotal} situații care cer verificare.`}
-            href="/admin/programari?paymentStatus=failed"
-            hrefLabel="Vezi plățile"
-          >
-            <BookingPreview
-              items={failedPaymentBookings}
-              emptyMessage="Nu există plăți eșuate de verificat."
-              showPayment
+              emptyMessage="Nu există cereri care așteaptă răspunsul prestatorului."
             />
           </PreviewCard>
 

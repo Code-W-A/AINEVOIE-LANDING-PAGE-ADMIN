@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CheckCircle2, Download, MoreHorizontal, Search, Trash2, X } from "lucide-react";
+import { CheckCircle2, Download, MoreHorizontal, RefreshCw, Search, Trash2, X } from "lucide-react";
 import { adminFetch, readAdminResponseError } from "@/components/admin/adminApi";
 import { AdminConfirmDialog } from "@/components/admin/AdminConfirmDialog";
 import { runAdminBulkDelete, useAdminBulkSelection } from "@/components/admin/useAdminBulkSelection";
@@ -131,6 +131,11 @@ type ProviderPayoutRequestAdminItem = {
   paidAt: string | null;
   paidByAdminUid: string | null;
   adminNote: string | null;
+  invoice: {
+    displayNumber: string | null;
+    status: "pending" | "ready" | "failed";
+    error: string | null;
+  };
   payoutDetails: {
     iban: string | null;
     accountHolderName: string | null;
@@ -221,6 +226,7 @@ export default function AdminPaymentsPage() {
   const [bulkActionHasFailures, setBulkActionHasFailures] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [pendingMarkPaidRequestId, setPendingMarkPaidRequestId] = useState<string | null>(null);
+  const [pendingInvoiceRequestId, setPendingInvoiceRequestId] = useState<string | null>(null);
 
   const hasActiveFilters = Boolean(
     q.trim()
@@ -326,7 +332,7 @@ export default function AdminPaymentsPage() {
     payoutRequestsEndpoint,
     { enabled: activeTab === PLATI_TABS.payout },
   );
-  const items = data?.items || [];
+  const items = useMemo(() => data?.items || [], [data?.items]);
   const payoutRequests = payoutRequestsData?.items || [];
   const payoutPagination = payoutRequestsData?.pagination;
   const pagination = data?.pagination;
@@ -447,6 +453,49 @@ export default function AdminPaymentsPage() {
       setActionError(nextError instanceof Error ? nextError.message : "Nu am putut marca payout-ul ca plătit.");
     } finally {
       setPendingMarkPaidRequestId(null);
+    }
+  }
+
+  async function handleDownloadInvoice(request: ProviderPayoutRequestAdminItem) {
+    setPendingInvoiceRequestId(request.requestId);
+    setActionError(null);
+    try {
+      const response = await adminFetch(
+        `/api/admin/provider-payout-requests/${encodeURIComponent(request.requestId)}/invoice`,
+      );
+      if (!response.ok) {
+        throw new Error(await readAdminResponseError(response, "Nu am putut descărca factura."));
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `${request.invoice.displayNumber || `factura-${request.requestId}`}.pdf`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (nextError) {
+      setActionError(nextError instanceof Error ? nextError.message : "Nu am putut descărca factura.");
+    } finally {
+      setPendingInvoiceRequestId(null);
+    }
+  }
+
+  async function handleRetryInvoice(requestId: string) {
+    setPendingInvoiceRequestId(requestId);
+    setActionError(null);
+    try {
+      const response = await adminFetch(
+        `/api/admin/provider-payout-requests/${encodeURIComponent(requestId)}/invoice/retry`,
+        { method: "POST" },
+      );
+      if (!response.ok) {
+        throw new Error(await readAdminResponseError(response, "Nu am putut reîncerca factura."));
+      }
+      await reloadPayoutRequests();
+    } catch (nextError) {
+      setActionError(nextError instanceof Error ? nextError.message : "Nu am putut reîncerca factura.");
+    } finally {
+      setPendingInvoiceRequestId(null);
     }
   }
 
@@ -912,6 +961,7 @@ export default function AdminPaymentsPage() {
                   <TableHead>Provider</TableHead>
                   <TableHead>Titular / IBAN</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Factură</TableHead>
                   <TableHead>Solicitat la</TableHead>
                   <TableHead>Brut</TableHead>
                   <TableHead>Comision</TableHead>
@@ -929,7 +979,10 @@ export default function AdminPaymentsPage() {
                             variant="outline"
                             size="icon"
                             className="h-8 w-8 shrink-0"
-                            disabled={pendingMarkPaidRequestId === request.requestId}
+                            disabled={
+                              pendingMarkPaidRequestId === request.requestId
+                              || pendingInvoiceRequestId === request.requestId
+                            }
                             aria-label="Acțiuni cerere payout"
                           >
                             <MoreHorizontal className="h-4 w-4" />
@@ -941,11 +994,30 @@ export default function AdminPaymentsPage() {
                               Vezi detalii
                             </Link>
                           </DropdownMenuItem>
+                          {request.invoice.status === "ready" ? (
+                            <DropdownMenuItem
+                              onSelect={() => { void handleDownloadInvoice(request); }}
+                            >
+                              <Download className="mr-2 h-4 w-4" />
+                              Descarcă factura
+                            </DropdownMenuItem>
+                          ) : null}
+                          {request.invoice.status === "failed" ? (
+                            <DropdownMenuItem
+                              onSelect={() => { void handleRetryInvoice(request.requestId); }}
+                            >
+                              <RefreshCw className="mr-2 h-4 w-4" />
+                              Reîncearcă factura
+                            </DropdownMenuItem>
+                          ) : null}
                           {request.status === "requested" ? (
                             <>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
-                                disabled={pendingMarkPaidRequestId === request.requestId}
+                                disabled={
+                                  pendingMarkPaidRequestId === request.requestId
+                                  || request.invoice.status !== "ready"
+                                }
                                 onSelect={() => { void handleMarkPayoutPaid(request.requestId); }}
                               >
                                 <CheckCircle2 className="mr-2 h-4 w-4" />
@@ -1000,6 +1072,28 @@ export default function AdminPaymentsPage() {
                         {label(request.status)}
                       </Badge>
                     </TableCell>
+                    <TableCell>
+                      <div className="font-medium">{request.invoice.displayNumber || "-"}</div>
+                      <Badge
+                        variant={
+                          request.invoice.status === "ready"
+                            ? "success"
+                            : request.invoice.status === "failed"
+                              ? "danger"
+                              : "warning"
+                        }
+                      >
+                        {label(request.invoice.status)}
+                      </Badge>
+                      {request.invoice.error ? (
+                        <div
+                          className="mt-1 max-w-[220px] truncate text-xs text-rose-500"
+                          title={request.invoice.error}
+                        >
+                          {request.invoice.error}
+                        </div>
+                      ) : null}
+                    </TableCell>
                     <TableCell>{formatAdminDateTime(request.requestedAt, { includeSeconds: true })}</TableCell>
                     <TableCell>{formatMoneyValue(request.grossAmount, request.currency)}</TableCell>
                     <TableCell>{formatMoneyValue(request.platformFeeAmount, request.currency)}</TableCell>
@@ -1008,7 +1102,7 @@ export default function AdminPaymentsPage() {
                 ))}
                 {!payoutRequests.length && (
                   <TableRow>
-                    <TableCell colSpan={9} className="py-8 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={10} className="py-8 text-center text-sm text-muted-foreground">
                       Nu există cereri payout pentru filtrul selectat.
                     </TableCell>
                   </TableRow>

@@ -33,7 +33,7 @@ import {
 } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
 import { ref, uploadBytes } from "firebase/storage";
-import { ChevronDown, Eye, EyeOff, FileCheck2, ImagePlus, UploadCloud } from "lucide-react";
+import { ChevronDown, Eye, EyeOff, FileCheck2, ImagePlus, Loader2, UploadCloud } from "lucide-react";
 import { Link, useRouter } from "@/i18n/navigation";
 import Image from "next/image";
 import { useLocale, useTranslations } from "next-intl";
@@ -1876,9 +1876,16 @@ export default function ProviderOnboardingFormWizard({
               void handleSubmit(onSubmit)();
             }}
             disabled={busy || !finalChecklistComplete}
-            className="bg-primary hover:bg-primary/90 rounded-md px-5 py-2 text-sm font-medium text-white disabled:opacity-60"
+            className="bg-primary hover:bg-primary/90 inline-flex items-center justify-center gap-2 rounded-md px-5 py-2 text-sm font-medium text-white disabled:opacity-60"
           >
-            {finalSubmitting ? t("submitting") : t("submitReview")}
+            {finalSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                {t("submitting")}
+              </>
+            ) : (
+              t("submitReview")
+            )}
           </button>
         )}
       </div>

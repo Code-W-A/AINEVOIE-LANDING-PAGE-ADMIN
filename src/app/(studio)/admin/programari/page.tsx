@@ -181,9 +181,8 @@ function formatPricingContext(item: BookingListItem) {
 
 function formatRequestResponseMeta(item: BookingListItem) {
   const status = item.requestResponse?.status;
-  const deadlineAt = item.requestResponse?.deadlineAt;
-  if (status === "pending" && deadlineAt) {
-    return `Răspuns până la ${formatAdminDateTime(deadlineAt)}`;
+  if (status === "pending") {
+    return "În așteptarea răspunsului · fără expirare";
   }
   if (status === "answered" && item.requestResponse?.answeredAt) {
     return `Răspuns înregistrat ${formatAdminDateTime(item.requestResponse.answeredAt)}`;

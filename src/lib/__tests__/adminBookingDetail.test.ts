@@ -5,6 +5,7 @@ import {
   formatBookingStatusLabel,
   formatPricingContext,
   formatRequestResponseStatus,
+  formatSlaSummary,
   getBookingSummaryMetrics,
   getOperationalBookingState,
   mergeBookingCaseData,
@@ -26,6 +27,15 @@ describe("adminBookingDetail helpers", () => {
   it("maps provider response statuses", () => {
     expect(formatRequestResponseStatus("answered")).toBe("Răspuns primit");
     expect(formatRequestResponseStatus("pending")).toBe("În așteptare");
+  });
+
+  it("shows the no-expiration policy instead of a response countdown", () => {
+    expect(formatSlaSummary({ status: "pending", deadlineAt: null })).toEqual({
+      label: "Fără expirare",
+      detail: "Cererea rămâne activă până la răspuns sau anulare",
+      variant: "warning",
+    });
+    expect(formatSlaSummary({ status: "answered", deadlineAt: null }).label).toBe("Răspuns primit");
   });
 
   it("builds operational state for confirmed unpaid bookings", () => {

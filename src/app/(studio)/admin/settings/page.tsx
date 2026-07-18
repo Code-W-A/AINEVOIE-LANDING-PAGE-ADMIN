@@ -28,11 +28,16 @@ import {
   getDefaultAppUpdateSettings,
 } from "@/lib/appUpdateSettings";
 import type { AppLocale } from "@/lib/apiLocale";
+import {
+  BillingSettings,
+  getDefaultBillingSettings,
+} from "@/lib/billingSettings";
 
 const TOP_TABS = {
   newsletter: "newsletter",
   templates: "templates",
   platformFee: "platformFee",
+  billing: "billing",
   appUpdate: "appUpdate",
   lists: "lists",
 } as const;
@@ -64,10 +69,31 @@ type AppUpdateSettingsResponse = {
   defaults: AppUpdateSettings;
 };
 
+type BillingSettingsResponse = {
+  item: BillingSettings;
+  defaults: BillingSettings;
+};
+
 const localeLabels: Record<AppUpdateLocale, string> = {
   ro: "Română",
   en: "English",
 };
+
+const billingFields: Array<{
+  key: keyof BillingSettings;
+  label: string;
+  placeholder: string;
+  type?: string;
+  optional?: boolean;
+}> = [
+  { key: "legalName", label: "Denumire legală AInevoie", placeholder: "Ex: AInevoie S.R.L." },
+  { key: "cui", label: "CUI", placeholder: "Ex: RO12345678" },
+  { key: "tradeRegister", label: "Registrul Comerțului", placeholder: "Ex: J40/1234/2026" },
+  { key: "fiscalAddress", label: "Adresă fiscală", placeholder: "Stradă, număr, localitate, județ" },
+  { key: "email", label: "Email facturare", placeholder: "facturare@ainevoie.ro", type: "email" },
+  { key: "iban", label: "IBAN (opțional)", placeholder: "RO...", optional: true },
+  { key: "bank", label: "Bancă (opțional)", placeholder: "Numele băncii", optional: true },
+];
 
 export default function SettingsPage() {
   const {
@@ -150,6 +176,18 @@ export default function SettingsPage() {
   const [appUpdateSaving, setAppUpdateSaving] = useState(false);
   const [appUpdateSaveError, setAppUpdateSaveError] = useState<string | null>(null);
   const [appUpdateSaveOk, setAppUpdateSaveOk] = useState(false);
+  const {
+    data: billingData,
+    loading: billingLoading,
+    error: billingError,
+    reload: reloadBilling,
+  } = useAdminData<BillingSettingsResponse>("/api/admin/billing-settings");
+  const [billingState, setBillingState] = useState<BillingSettings>(
+    getDefaultBillingSettings()
+  );
+  const [billingSaving, setBillingSaving] = useState(false);
+  const [billingSaveError, setBillingSaveError] = useState<string | null>(null);
+  const [billingSaveOk, setBillingSaveOk] = useState(false);
 
   useEffect(() => {
     if (templatesData?.item) {
@@ -170,6 +208,17 @@ export default function SettingsPage() {
       setAppUpdateState(appUpdateData.item);
     }
   }, [appUpdateData]);
+
+  useEffect(() => {
+    if (billingData?.item) {
+      setBillingState(billingData.item);
+    }
+  }, [billingData]);
+
+  function updateBillingField(field: keyof BillingSettings, value: string) {
+    setBillingState((previous) => ({ ...previous, [field]: value }));
+    setBillingSaveOk(false);
+  }
 
   function updateAppUpdateField<K extends keyof AppUpdateSettings>(
     field: K,
@@ -266,6 +315,36 @@ export default function SettingsPage() {
     }
   }
 
+  async function saveBillingSettings() {
+    setBillingSaving(true);
+    setBillingSaveError(null);
+    try {
+      const response = await adminFetch("/api/admin/billing-settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(billingState),
+      });
+      if (!response.ok) {
+        throw new Error(await readAdminResponseError(
+          response,
+          "Nu am putut salva setările de facturare.",
+        ));
+      }
+      const json = await response.json();
+      if (json?.item) setBillingState(json.item);
+      await reloadBilling();
+      setBillingSaveOk(true);
+    } catch (error) {
+      setBillingSaveError(
+        error instanceof Error
+          ? error.message
+          : "Nu am putut salva setările de facturare.",
+      );
+    } finally {
+      setBillingSaving(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -294,6 +373,12 @@ export default function SettingsPage() {
             className={tabTriggerClass(topTab === TOP_TABS.platformFee)}
           >
             Comision platformă
+          </TabTrigger>
+          <TabTrigger
+            value={TOP_TABS.billing}
+            className={tabTriggerClass(topTab === TOP_TABS.billing)}
+          >
+            Facturare
           </TabTrigger>
           <TabTrigger
             value={TOP_TABS.appUpdate}
@@ -591,6 +676,61 @@ export default function SettingsPage() {
               disabled={appUpdateSaving || appUpdateLoading}
             >
               {appUpdateSaving ? "Se salvează..." : "Salvează setările"}
+            </Button>
+          </div>
+        </TabContent>
+
+        <TabContent value={TOP_TABS.billing} className="mt-6 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Date emitent factură</CardTitle>
+              <CardDescription>
+                Datele legale AInevoie folosite de backend la generarea facturilor de payout.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {billingError ? (
+                <p className="mb-4 text-sm text-rose-500">{billingError}</p>
+              ) : null}
+              {billingLoading ? (
+                <AdminFormGridSkeleton fields={7} />
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {billingFields.map((field) => (
+                    <div
+                      key={field.key}
+                      className={`space-y-2 ${field.key === "fiscalAddress" ? "md:col-span-2" : ""}`}
+                    >
+                      <label htmlFor={`billing-${field.key}`} className="text-sm font-medium">
+                        {field.label}
+                      </label>
+                      <Input
+                        id={`billing-${field.key}`}
+                        type={field.type}
+                        required={!field.optional}
+                        value={billingState[field.key]}
+                        placeholder={field.placeholder}
+                        onChange={(event) => updateBillingField(field.key, event.target.value)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          <div className="flex items-center justify-end gap-3">
+            {billingSaveError ? (
+              <p className="text-sm text-rose-500">{billingSaveError}</p>
+            ) : null}
+            {billingSaveOk && !billingSaveError ? (
+              <p className="text-sm text-emerald-600">Setările de facturare au fost salvate.</p>
+            ) : null}
+            <Button
+              type="button"
+              disabled={billingSaving || billingLoading}
+              onClick={() => { void saveBillingSettings(); }}
+            >
+              {billingSaving ? "Se salvează..." : "Salvează facturarea"}
             </Button>
           </div>
         </TabContent>

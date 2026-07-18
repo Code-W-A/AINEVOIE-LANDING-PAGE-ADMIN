@@ -143,6 +143,26 @@ describe("admin provider payout request routes", () => {
           providerNetAmount: 160,
           paymentIds: ["pay_1"],
           requestedAt: new Date("2026-05-08T10:00:00.000Z"),
+          invoice: {
+            series: "AN",
+            number: "42",
+            displayNumber: "AN 42",
+            issuedAt: new Date("2026-05-08T10:05:00.000Z"),
+            status: "ready",
+            storagePath: "invoices/payout_1.pdf",
+            totalAmount: 160,
+            netAmount: 160,
+            vatAmount: 0,
+            vatRate: 0,
+          },
+          issuerSnapshot: {
+            legalName: "Provider One SRL",
+            cui: "RO12345678",
+          },
+          buyerSnapshot: {
+            legalName: "AInevoie SRL",
+            cui: "RO87654321",
+          },
           payoutDetailsSnapshot: {
             iban: "RO49AAAA1B31007593840000",
             accountHolderName: "Provider One SRL",
@@ -194,6 +214,12 @@ describe("admin provider payout request routes", () => {
       accountHolderName: "Provider One SRL",
       ibanLast4: "0000",
       source: "snapshot",
+    }));
+    expect(json.items[0].invoice).toEqual(expect.objectContaining({
+      displayNumber: "AN 42",
+      status: "ready",
+      issuer: expect.objectContaining({ legalName: "Provider One SRL" }),
+      buyer: expect.objectContaining({ legalName: "AInevoie SRL" }),
     }));
   });
 
@@ -253,6 +279,12 @@ describe("admin provider payout request routes", () => {
           providerNetAmount: 120,
           paymentIds: ["pay_1"],
           requestedAt: new Date("2026-05-08T10:00:00.000Z"),
+          invoice: {
+            status: "ready",
+            storagePath: "invoices/payout_legacy.pdf",
+            issuer: { legalName: "Provider Snapshot SRL", taxId: "RO11111111" },
+            buyer: { companyName: "AInevoie Snapshot SRL", taxId: "RO22222222" },
+          },
         },
       ],
       payments: new Map([
@@ -281,6 +313,8 @@ describe("admin provider payout request routes", () => {
     expect(response.status).toBe(200);
     expect(json.item.payoutDetails.source).toBe("live_provider");
     expect(json.item.payoutDetails.iban).toBe("RO49AAAA1B31007593840000");
+    expect(json.item.invoice.issuer.legalName).toBe("Provider Snapshot SRL");
+    expect(json.item.invoice.buyer.legalName).toBe("AInevoie Snapshot SRL");
   });
 
   it("filters payout requests by status in memory", async () => {
@@ -444,5 +478,62 @@ describe("admin provider payout request routes", () => {
 
     expect(response.status).toBe(200);
     expect(json.item.status).toBe("paid");
+  });
+
+  it("blocks marking paid while the invoice is not ready", async () => {
+    mocks.setFixtures({
+      payoutRequests: [{
+        requestId: "payout_pending",
+        providerId: "provider_1",
+        status: "requested",
+        paymentIds: ["pay_1"],
+        invoice: { status: "pending" },
+      }],
+      payments: new Map([["pay_1", { providerPayoutStatus: "requested" }]]),
+      providers: new Map(),
+    });
+
+    const { POST } = await import("../[id]/mark-paid/route");
+    const response = await POST(
+      new Request("https://example.com/api/admin/provider-payout-requests/payout_pending/mark-paid", {
+        method: "POST",
+        body: "{}",
+      }),
+      { params: Promise.resolve({ id: "payout_pending" }) },
+    );
+    expect(response.status).toBe(409);
+    expect((await response.json()).error).toMatch(/facturii/);
+  });
+
+  it("retries a failed invoice by resetting it to pending", async () => {
+    mocks.setFixtures({
+      payoutRequests: [{
+        requestId: "payout_failed",
+        providerId: "provider_1",
+        status: "requested",
+        paymentIds: [],
+        invoice: {
+          displayNumber: "AN 43",
+          status: "failed",
+          storagePath: "old.pdf",
+          error: "generation failed",
+        },
+      }],
+      payments: new Map(),
+      providers: new Map(),
+    });
+
+    const { POST } = await import("../[id]/invoice/retry/route");
+    const response = await POST(
+      new Request("https://example.com/api/admin/provider-payout-requests/payout_failed/invoice/retry", {
+        method: "POST",
+      }),
+      { params: Promise.resolve({ id: "payout_failed" }) },
+    );
+    const json = await response.json();
+    expect(response.status).toBe(200);
+    expect(json.item.invoice.status).toBe("pending");
+    expect(json.item.invoice.error).toBeNull();
+    expect(json.item.invoice.displayNumber).toBe("AN 43");
   });
 });

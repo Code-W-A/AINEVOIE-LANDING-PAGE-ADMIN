@@ -74,11 +74,40 @@ export type ProviderPayoutRequestAdminItem = {
   paidByAdminUid: string | null;
   adminNote: string | null;
   payoutDetails: ProviderPayoutDetailsAdminItem;
+  invoice: ProviderPayoutInvoiceAdminItem;
   provider: {
     providerId: string | null;
     displayName: string | null;
     email: string | null;
   };
+};
+
+export type ProviderPayoutInvoiceStatus = "pending" | "ready" | "failed";
+
+export type ProviderPayoutInvoicePartyAdminItem = {
+  legalName: string | null;
+  cui: string | null;
+  tradeRegister: string | null;
+  fiscalAddress: string | null;
+  email: string | null;
+  iban: string | null;
+  bank: string | null;
+};
+
+export type ProviderPayoutInvoiceAdminItem = {
+  series: string | null;
+  number: string | null;
+  displayNumber: string | null;
+  issuedAt: string | null;
+  status: ProviderPayoutInvoiceStatus;
+  storagePath: string | null;
+  totalAmount: number;
+  netAmount: number;
+  vatAmount: number;
+  vatRate: number;
+  error: string | null;
+  issuer: ProviderPayoutInvoicePartyAdminItem | null;
+  buyer: ProviderPayoutInvoicePartyAdminItem | null;
 };
 
 export type ProviderPayoutDetailsAdminItem = {
@@ -152,6 +181,75 @@ function readProviderPayoutDetailsAdmin(
   };
 }
 
+function readInvoiceParty(value: unknown): ProviderPayoutInvoicePartyAdminItem | null {
+  const source = readRecord(value);
+  if (!Object.keys(source).length) return null;
+  const address = readRecord(source.address);
+  const formattedAddress = [
+    readString(address.line1),
+    readString(address.line2),
+    [readString(address.postalCode), readString(address.city)].filter(Boolean).join(" "),
+    readString(address.county),
+    readString(address.countryCode),
+  ].filter(Boolean).join(", ");
+
+  return {
+    legalName: readString(source.legalName ?? source.name ?? source.companyName) || null,
+    cui: readString(source.cui ?? source.taxId) || null,
+    tradeRegister: readString(source.tradeRegister ?? source.registrationNumber) || null,
+    fiscalAddress: readString(source.fiscalAddress) || formattedAddress || null,
+    email: readString(source.email) || null,
+    iban: readString(source.iban) || null,
+    bank: readString(source.bank ?? source.bankName) || null,
+  };
+}
+
+function readFirstInvoiceParty(...values: unknown[]) {
+  for (const value of values) {
+    const party = readInvoiceParty(value);
+    if (party) return party;
+  }
+  return null;
+}
+
+function readProviderPayoutInvoiceAdmin(
+  request: Record<string, unknown>,
+): ProviderPayoutInvoiceAdminItem {
+  const invoice = readRecord(request.invoice);
+  const rawStatus = readString(invoice.status);
+  const status: ProviderPayoutInvoiceStatus = rawStatus === "ready" || rawStatus === "failed"
+    ? rawStatus
+    : "pending";
+  const issuer = readFirstInvoiceParty(
+    request.issuerSnapshot,
+    invoice.issuerSnapshot,
+    invoice.issuer,
+  );
+  const buyer = readFirstInvoiceParty(
+    request.buyerSnapshot,
+    invoice.buyerSnapshot,
+    invoice.buyer,
+  );
+
+  return {
+    series: readString(invoice.series) || null,
+    number: readString(invoice.number) || null,
+    displayNumber: readString(invoice.displayNumber)
+      || [readString(invoice.series), readString(invoice.number)].filter(Boolean).join(" ")
+      || null,
+    issuedAt: toIso(invoice.issuedAt),
+    status,
+    storagePath: readString(invoice.storagePath) || null,
+    totalAmount: toNumber(invoice.totalAmount),
+    netAmount: toNumber(invoice.netAmount),
+    vatAmount: toNumber(invoice.vatAmount),
+    vatRate: toNumber(invoice.vatRate),
+    error: readString(invoice.error) || null,
+    issuer,
+    buyer,
+  };
+}
+
 function mapProviderPayoutRequestAdminItem(
   request: Record<string, unknown> & { requestId: string },
   provider: Record<string, unknown> | null,
@@ -172,6 +270,7 @@ function mapProviderPayoutRequestAdminItem(
     paidByAdminUid: readString(request.paidByAdminUid) || null,
     adminNote: readString(request.adminNote) || null,
     payoutDetails: readProviderPayoutDetailsAdmin(request, provider),
+    invoice: readProviderPayoutInvoiceAdmin(request),
     provider: {
       providerId,
       displayName:
@@ -531,6 +630,9 @@ function matchesPayoutRequestSearch(
     request.payoutDetails.accountHolderName,
     request.payoutDetails.ibanLast4,
     request.payoutDetails.bankName,
+    request.invoice.displayNumber,
+    request.invoice.issuer?.legalName,
+    request.invoice.buyer?.legalName,
   ]
     .map((value) => normalizeText(value))
     .some((value) => value.includes(token));
@@ -733,6 +835,12 @@ export async function markProviderPayoutRequestPaid(params: {
     if (readString(request.status) !== "requested") {
       throw new Error("payout_request_not_requested");
     }
+    if (
+      readString(readRecord(request.invoice).status) !== "ready"
+      && readString(request.invoiceStatus) !== "ready"
+    ) {
+      throw new Error("payout_invoice_not_ready");
+    }
 
     const paymentIds = readStringArray(request.paymentIds);
     const paymentRefs = paymentIds.map((paymentId) => db.collection("payments").doc(paymentId));
@@ -772,4 +880,62 @@ export async function markProviderPayoutRequestPaid(params: {
       updatedPaymentCount: paymentRefs.length,
     };
   });
+}
+
+export async function getProviderPayoutInvoiceStorage(requestIdValue: string) {
+  const requestId = readString(requestIdValue);
+  if (!requestId) throw new Error("missing_request_id");
+
+  const requestSnap = await getAdminDb()
+    .collection("providerPayoutRequests")
+    .doc(requestId)
+    .get();
+  if (!requestSnap.exists) throw new Error("payout_request_not_found");
+
+  const invoice = readProviderPayoutInvoiceAdmin(requestSnap.data() || {});
+  if (invoice.status !== "ready" || !invoice.storagePath) {
+    throw new Error("payout_invoice_not_ready");
+  }
+
+  return {
+    storagePath: invoice.storagePath,
+    displayNumber: invoice.displayNumber,
+  };
+}
+
+export async function retryProviderPayoutInvoice(params: {
+  requestId: string;
+  adminUid: string;
+}) {
+  const requestId = readString(params.requestId);
+  const adminUid = readString(params.adminUid);
+  if (!requestId) throw new Error("missing_request_id");
+
+  const db = getAdminDb();
+  const requestRef = db.collection("providerPayoutRequests").doc(requestId);
+  await db.runTransaction(async (transaction) => {
+    const requestSnap = await transaction.get(requestRef);
+    if (!requestSnap.exists) throw new Error("payout_request_not_found");
+
+    const request = requestSnap.data() || {};
+    const requestInvoice = readRecord(request.invoice);
+    const invoiceStatus = readString(requestInvoice.status) || readString(request.invoiceStatus);
+    if (invoiceStatus !== "failed") {
+      throw new Error("payout_invoice_not_failed");
+    }
+
+    transaction.set(requestRef, {
+      invoice: {
+        ...requestInvoice,
+        status: "pending",
+        error: null,
+      },
+      invoiceStatus: "pending",
+      invoiceError: null,
+      updatedAt: Timestamp.now(),
+      updatedBy: adminUid,
+    }, { merge: true });
+  });
+
+  return getAdminProviderPayoutRequestDetail(requestId);
 }

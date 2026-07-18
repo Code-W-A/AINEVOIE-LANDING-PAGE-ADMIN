@@ -500,33 +500,13 @@ export function getOperationalBookingState(
 }
 
 export function formatSlaSummary(requestResponse?: BookingDocument["requestResponse"] | null) {
-  if (!requestResponse?.deadlineAt) {
-    return { label: "Fără termen", detail: "Nu există deadline configurat", variant: "outline" as const };
-  }
-
-  if (readString(requestResponse.status).toLowerCase() === "answered") {
+  if (readString(requestResponse?.status).toLowerCase() === "answered") {
     return { label: "Răspuns primit", detail: "Prestatorul a răspuns la cerere", variant: "success" as const };
   }
-
-  const deadlineMs = parseMillis(requestResponse.deadlineAt);
-  if (!deadlineMs) {
-    return { label: "Termen invalid", detail: "Deadline indisponibil", variant: "outline" as const };
+  if (readString(requestResponse?.status).toLowerCase() === "expired") {
+    return { label: "Expirată (istoric)", detail: "Cerere creată înainte de eliminarea expirării", variant: "outline" as const };
   }
-
-  const diffMinutes = Math.round((deadlineMs - Date.now()) / 60_000);
-  if (diffMinutes < 0) {
-    return {
-      label: "Întârziat",
-      detail: `Întârziat cu ${Math.abs(diffMinutes)} min`,
-      variant: "danger" as const,
-    };
-  }
-
-  return {
-    label: "În așteptare",
-    detail: `${diffMinutes} min rămase`,
-    variant: "warning" as const,
-  };
+  return { label: "Fără expirare", detail: "Cererea rămâne activă până la răspuns sau anulare", variant: "warning" as const };
 }
 
 export function getConversationId(bookingId: string, conversation?: Record<string, unknown> | null) {

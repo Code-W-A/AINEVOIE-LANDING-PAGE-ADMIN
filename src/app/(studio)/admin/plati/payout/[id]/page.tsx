@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import { ArrowLeft, CheckCircle2, Copy, Save } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Copy, Download, RefreshCw, Save } from "lucide-react";
 import { adminFetch, readAdminResponseError } from "@/components/admin/adminApi";
 import { AdminTableSkeleton } from "@/components/admin/AdminSkeletonLayouts";
 import { useAdminData } from "@/components/admin/useAdminData";
@@ -87,6 +87,7 @@ export default function AdminProviderPayoutRequestDetailPage() {
   const [adminNote, setAdminNote] = useState("");
   const [pendingSaveNote, setPendingSaveNote] = useState(false);
   const [pendingMarkPaid, setPendingMarkPaid] = useState(false);
+  const [pendingInvoice, setPendingInvoice] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [copyMessage, setCopyMessage] = useState<string | null>(null);
 
@@ -167,6 +168,51 @@ export default function AdminProviderPayoutRequestDetailPage() {
       setActionError(nextError instanceof Error ? nextError.message : "Nu am putut marca payout-ul ca plătit.");
     } finally {
       setPendingMarkPaid(false);
+    }
+  }
+
+  async function handleDownloadInvoice() {
+    if (!requestId || !item) return;
+    setPendingInvoice(true);
+    setActionError(null);
+    try {
+      const response = await adminFetch(
+        `/api/admin/provider-payout-requests/${encodeURIComponent(requestId)}/invoice`,
+      );
+      if (!response.ok) {
+        throw new Error(await readAdminResponseError(response, "Nu am putut descărca factura."));
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `${item.invoice.displayNumber || `factura-${requestId}`}.pdf`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (nextError) {
+      setActionError(nextError instanceof Error ? nextError.message : "Nu am putut descărca factura.");
+    } finally {
+      setPendingInvoice(false);
+    }
+  }
+
+  async function handleRetryInvoice() {
+    if (!requestId) return;
+    setPendingInvoice(true);
+    setActionError(null);
+    try {
+      const response = await adminFetch(
+        `/api/admin/provider-payout-requests/${encodeURIComponent(requestId)}/invoice/retry`,
+        { method: "POST" },
+      );
+      if (!response.ok) {
+        throw new Error(await readAdminResponseError(response, "Nu am putut reîncerca factura."));
+      }
+      await reload();
+    } catch (nextError) {
+      setActionError(nextError instanceof Error ? nextError.message : "Nu am putut reîncerca factura.");
+    } finally {
+      setPendingInvoice(false);
     }
   }
 
@@ -297,6 +343,75 @@ export default function AdminProviderPayoutRequestDetailPage() {
 
       <Card>
         <CardHeader>
+          <CardTitle>Factură payout</CardTitle>
+          <CardDescription>
+            Documentul fiscal generat din snapshot-urile păstrate la momentul cererii.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {infoRow("Număr", item.invoice.displayNumber || "-")}
+            {infoRow("Status", label(item.invoice.status))}
+            {infoRow("Emisă la", formatAdminDateTime(item.invoice.issuedAt, { includeSeconds: true }))}
+            {infoRow("Total", formatMoneyValue(item.invoice.totalAmount, item.currency))}
+            {infoRow("Net", formatMoneyValue(item.invoice.netAmount, item.currency))}
+            {infoRow("TVA", formatMoneyValue(item.invoice.vatAmount, item.currency))}
+            {infoRow("Cotă TVA", `${item.invoice.vatRate || 0}%`)}
+          </div>
+          {item.invoice.error ? (
+            <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+              {item.invoice.error}
+            </p>
+          ) : null}
+          <div className="grid gap-3 md:grid-cols-2">
+            {item.invoice.issuer ? (
+              <div className="rounded-md border p-3 text-sm">
+                <p className="mb-2 font-semibold">Emitent (snapshot)</p>
+                <p>{item.invoice.issuer.legalName || "-"}</p>
+                <p>CUI: {item.invoice.issuer.cui || "-"}</p>
+                <p>Registru: {item.invoice.issuer.tradeRegister || "-"}</p>
+                <p>{item.invoice.issuer.fiscalAddress || "-"}</p>
+              </div>
+            ) : null}
+            {item.invoice.buyer ? (
+              <div className="rounded-md border p-3 text-sm">
+                <p className="mb-2 font-semibold">Cumpărător (snapshot)</p>
+                <p>{item.invoice.buyer.legalName || "-"}</p>
+                <p>CUI: {item.invoice.buyer.cui || "-"}</p>
+                <p>Registru: {item.invoice.buyer.tradeRegister || "-"}</p>
+                <p>{item.invoice.buyer.fiscalAddress || "-"}</p>
+              </div>
+            ) : null}
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {item.invoice.status === "ready" ? (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={pendingInvoice}
+                onClick={() => { void handleDownloadInvoice(); }}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Descarcă PDF
+              </Button>
+            ) : null}
+            {item.invoice.status === "failed" ? (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={pendingInvoice}
+                onClick={() => { void handleRetryInvoice(); }}
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Reîncearcă generarea
+              </Button>
+            ) : null}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Plăți incluse</CardTitle>
           <CardDescription>Plățile care fac parte din această cerere de payout.</CardDescription>
         </CardHeader>
@@ -375,7 +490,7 @@ export default function AdminProviderPayoutRequestDetailPage() {
               {item.status === "requested" ? (
                 <Button
                   type="button"
-                  disabled={pendingSaveNote || pendingMarkPaid}
+                  disabled={pendingSaveNote || pendingMarkPaid || item.invoice.status !== "ready"}
                   onClick={() => { void handleMarkPaid(); }}
                 >
                   <CheckCircle2 className="mr-2 h-4 w-4" />
@@ -383,6 +498,11 @@ export default function AdminProviderPayoutRequestDetailPage() {
                 </Button>
               ) : null}
             </div>
+            {item.status === "requested" && item.invoice.status !== "ready" ? (
+              <p className="text-xs text-amber-700">
+                Payout-ul poate fi marcat plătit numai după ce factura este gata.
+              </p>
+            ) : null}
           </CardContent>
         </Card>
 
