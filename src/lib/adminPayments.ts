@@ -29,6 +29,16 @@ export type PaymentAdminListItem = {
   stripeStatus: string | null;
   webhookEventId: string | null;
   webhookState: PaymentWebhookState;
+  refundSummary: {
+    status: string;
+    reason: string | null;
+    amount: number;
+    stripeRefundId: string | null;
+    requiredAt: string | null;
+    refundedAt: string | null;
+    failedAt: string | null;
+    lastError: string | null;
+  } | null;
   booking: {
     bookingId: string | null;
     status: string | null;
@@ -529,6 +539,21 @@ export async function listAdminPayments(
       stripeStatus: readString(payment.stripeStatus) || null,
       webhookEventId: readString(payment.webhookEventId) || null,
       webhookState: resolveWebhookState(payment, nowMs),
+      refundSummary: (() => {
+        const refund = readRecord(payment.refundSummary);
+        const refundStatus = readString(refund.status);
+        if (!refundStatus) return null;
+        return {
+          status: refundStatus,
+          reason: readString(refund.reason) || null,
+          amount: toNumber(refund.amount),
+          stripeRefundId: readString(refund.stripeRefundId) || null,
+          requiredAt: toIso(refund.requiredAt),
+          refundedAt: toIso(refund.refundedAt),
+          failedAt: toIso(refund.failedAt),
+          lastError: readString(refund.lastError) || null,
+        };
+      })(),
       booking: {
         bookingId,
         status: readString(booking?.status) || null,

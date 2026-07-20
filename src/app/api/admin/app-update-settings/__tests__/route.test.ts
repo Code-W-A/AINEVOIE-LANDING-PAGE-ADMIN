@@ -71,8 +71,10 @@ describe("admin app update settings route", () => {
 
     expect(response.status).toBe(200);
     expect(json.item.paymentDemoModeEnabled).toBe(false);
+    expect(json.item.bookingPreauthorizationEnabled).toBe(false);
     expect(json.item.platformFeePercent).toBe(20);
     expect(json.defaults.paymentDemoModeEnabled).toBe(false);
+    expect(json.defaults.bookingPreauthorizationEnabled).toBe(false);
     expect(json.defaults.platformFeePercent).toBe(20);
   });
 
@@ -83,6 +85,7 @@ describe("admin app update settings route", () => {
       body: JSON.stringify({
         enabled: false,
         paymentDemoModeEnabled: true,
+        bookingPreauthorizationEnabled: true,
         platformFeePercent: 17.5,
         mode: "notice",
         urls: {},
@@ -92,10 +95,12 @@ describe("admin app update settings route", () => {
 
     expect(response.status).toBe(200);
     expect(json.item.paymentDemoModeEnabled).toBe(true);
+    expect(json.item.bookingPreauthorizationEnabled).toBe(true);
     expect(json.item.platformFeePercent).toBe(17.5);
     expect(mocks.setDoc).toHaveBeenCalledWith(
       expect.objectContaining({
         paymentDemoModeEnabled: true,
+        bookingPreauthorizationEnabled: true,
         platformFeePercent: 17.5,
       }),
       { merge: true }

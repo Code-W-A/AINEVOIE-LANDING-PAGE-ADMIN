@@ -87,6 +87,16 @@ type PaymentAdminListItem = {
   stripePaymentIntentId: string | null;
   stripeLatestChargeId: string | null;
   webhookState: PaymentWebhookState;
+  refundSummary: {
+    status: string;
+    reason: string | null;
+    amount: number;
+    stripeRefundId: string | null;
+    requiredAt: string | null;
+    refundedAt: string | null;
+    failedAt: string | null;
+    lastError: string | null;
+  } | null;
   booking: {
     bookingId?: string | null;
     status: string | null;
@@ -161,11 +171,12 @@ type ProviderPayoutRequestsResponse = {
   };
 };
 
-const paymentStatuses = ["unpaid", "authorizing", "in_progress", "authorized", "capturing", "paid", "failed", "released", "capture_failed"];
+const paymentStatuses = ["unpaid", "authorizing", "in_progress", "authorized", "capturing", "paid", "failed", "released", "capture_failed", "refunded"];
 const payoutStatuses = ["not_available", "available", "requested", "paid"];
 
 function paymentBadgeVariant(status?: string | null) {
   if (status === "paid") return "success";
+  if (status === "refunded") return "outline";
   if (status === "failed" || status === "capture_failed") return "danger";
   if (status === "in_progress" || status === "authorizing" || status === "authorized" || status === "capturing") return "warning";
   return "outline";
@@ -674,7 +685,7 @@ export default function AdminPaymentsPage() {
             </p>
           ) : null}
           {loading ? (
-            <AdminTableSkeleton rows={10} columns={17} />
+            <AdminTableSkeleton rows={10} columns={18} />
           ) : (
             <Table>
               <TableHeader>
@@ -688,6 +699,7 @@ export default function AdminPaymentsPage() {
                   <TableHead className="w-12">Acțiuni</TableHead>
                   <TableHead>Payment</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Refund Stripe (doar status)</TableHead>
                   <TableHead>Creat la</TableHead>
                   <TableHead>Brut</TableHead>
                   <TableHead>Comision</TableHead>
@@ -766,6 +778,13 @@ export default function AdminPaymentsPage() {
                         {label(item.status)}
                       </Badge>
                     </TableCell>
+                    <TableCell>
+                      {item.refundSummary ? (
+                        <Badge variant={item.refundSummary.status === "failed" ? "danger" : item.refundSummary.status === "required" ? "warning" : "outline"}>
+                          {label(item.refundSummary.status)}
+                        </Badge>
+                      ) : "-"}
+                    </TableCell>
                     <TableCell>{formatAdminDateTime(item.createdAt, { includeSeconds: true })}</TableCell>
                     <TableCell>{formatMoneyValue(item.grossAmount || item.amount, item.currency)}</TableCell>
                     <TableCell>
@@ -843,7 +862,7 @@ export default function AdminPaymentsPage() {
                 ))}
                 {!items.length && (
                   <TableRow>
-                    <TableCell colSpan={17} className="py-8 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={18} className="py-8 text-center text-sm text-muted-foreground">
                       Nu exista plati pentru filtrele selectate.
                     </TableCell>
                   </TableRow>

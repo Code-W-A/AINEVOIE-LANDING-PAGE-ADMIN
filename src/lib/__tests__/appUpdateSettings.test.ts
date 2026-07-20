@@ -13,6 +13,7 @@ describe("app update settings", () => {
 
     expect(settings.enabled).toBe(false);
     expect(settings.paymentDemoModeEnabled).toBe(false);
+    expect(settings.bookingPreauthorizationEnabled).toBe(false);
     expect(settings.platformFeePercent).toBe(20);
     expect(settings.minPayoutAmount).toBe(50);
     expect(settings.mode).toBe("notice");
@@ -75,6 +76,7 @@ describe("app update settings", () => {
     const settings = sanitizeAppUpdateSettings({
       enabled: true,
       paymentDemoModeEnabled: true,
+      bookingPreauthorizationEnabled: true,
       platformFeePercent: 12.5,
       mode: "notice",
       secret: "internal",
@@ -86,6 +88,7 @@ describe("app update settings", () => {
 
     expect(publicSettings.enabled).toBe(true);
     expect(publicSettings.paymentDemoModeEnabled).toBe(true);
+    expect(publicSettings.bookingPreauthorizationEnabled).toBe(true);
     expect(publicSettings.platformFeePercent).toBe(12.5);
     expect(publicSettings.minPayoutAmount).toBe(50);
     expect(publicSettings.urls.fallback).toBe("https://ainevoie.ro/update");

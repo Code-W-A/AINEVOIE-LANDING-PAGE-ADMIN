@@ -46,6 +46,7 @@ describe("public app update settings route", () => {
     mocks.setDocData({
       enabled: true,
       paymentDemoModeEnabled: true,
+      bookingPreauthorizationEnabled: true,
       mode: "notice",
       urls: {
         fallback: "https://ainevoie.ro/update",
@@ -58,6 +59,7 @@ describe("public app update settings route", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(json.item.paymentDemoModeEnabled).toBe(true);
+    expect(json.item.bookingPreauthorizationEnabled).toBe(true);
   });
 
   it("returns default paymentDemoModeEnabled when document is missing", async () => {
@@ -66,5 +68,6 @@ describe("public app update settings route", () => {
 
     expect(response.status).toBe(200);
     expect(json.item.paymentDemoModeEnabled).toBe(false);
+    expect(json.item.bookingPreauthorizationEnabled).toBe(false);
   });
 });

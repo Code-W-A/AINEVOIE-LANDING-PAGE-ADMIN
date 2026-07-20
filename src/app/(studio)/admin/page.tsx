@@ -71,6 +71,7 @@ const paymentStatusMeta: Record<string, { label: string; variant: BadgeVariant }
   failed: { label: "Eșuată", variant: "danger" },
   released: { label: "Garanție eliberată", variant: "outline" },
   capture_failed: { label: "Încasare eșuată", variant: "danger" },
+  refunded: { label: "Rambursată", variant: "outline" },
 };
 
 function readRecord(value: unknown): Record<string, unknown> {

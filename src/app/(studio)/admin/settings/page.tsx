@@ -794,6 +794,28 @@ export default function SettingsPage() {
                         </span>
                       </span>
                     </label>
+                    <label className="flex items-start gap-3 rounded-lg border border-border p-4">
+                      <input
+                        type="checkbox"
+                        className="mt-1 size-4"
+                        checked={appUpdateState.bookingPreauthorizationEnabled}
+                        onChange={(event) =>
+                          updateAppUpdateField(
+                            "bookingPreauthorizationEnabled",
+                            event.target.checked
+                          )
+                        }
+                      />
+                      <span>
+                        <span className="block text-sm font-medium">
+                          Autorizează garanția înainte de trimiterea cererii
+                        </span>
+                        <span className="block text-sm text-muted-foreground">
+                          Cererile noi devin vizibile prestatorului numai după blocarea
+                          sumei și sunt debitate automat la confirmare.
+                        </span>
+                      </span>
+                    </label>
 
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Mod afișare</label>

@@ -121,6 +121,7 @@ const paymentStatuses = [
   "failed",
   "released",
   "capture_failed",
+  "refunded",
 ];
 
 function badgeVariant(status?: string | null) {
