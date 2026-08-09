@@ -39,6 +39,7 @@ const TOP_TABS = {
   platformFee: "platformFee",
   billing: "billing",
   appUpdate: "appUpdate",
+  other: "other",
   lists: "lists",
 } as const;
 
@@ -385,6 +386,12 @@ export default function SettingsPage() {
             className={tabTriggerClass(topTab === TOP_TABS.appUpdate)}
           >
             Actualizare aplicație
+          </TabTrigger>
+          <TabTrigger
+            value={TOP_TABS.other}
+            className={tabTriggerClass(topTab === TOP_TABS.other)}
+          >
+            Alte setări
           </TabTrigger>
           <TabTrigger
             value={TOP_TABS.lists}
@@ -772,51 +779,6 @@ export default function SettingsPage() {
                         </span>
                       </span>
                     </label>
-                    <label className="flex items-start gap-3 rounded-lg border border-border p-4">
-                      <input
-                        type="checkbox"
-                        className="mt-1 size-4"
-                        checked={appUpdateState.paymentDemoModeEnabled}
-                        onChange={(event) =>
-                          updateAppUpdateField(
-                            "paymentDemoModeEnabled",
-                            event.target.checked
-                          )
-                        }
-                      />
-                      <span>
-                        <span className="block text-sm font-medium">
-                          Activează plată demo (fără Stripe)
-                        </span>
-                        <span className="block text-sm text-muted-foreground">
-                          Checkout-ul mobil finalizează plata prin fluxul demo,
-                          fără PaymentSheet Stripe.
-                        </span>
-                      </span>
-                    </label>
-                    <label className="flex items-start gap-3 rounded-lg border border-border p-4">
-                      <input
-                        type="checkbox"
-                        className="mt-1 size-4"
-                        checked={appUpdateState.bookingPreauthorizationEnabled}
-                        onChange={(event) =>
-                          updateAppUpdateField(
-                            "bookingPreauthorizationEnabled",
-                            event.target.checked
-                          )
-                        }
-                      />
-                      <span>
-                        <span className="block text-sm font-medium">
-                          Autorizează garanția înainte de trimiterea cererii
-                        </span>
-                        <span className="block text-sm text-muted-foreground">
-                          Cererile noi devin vizibile prestatorului numai după blocarea
-                          sumei și sunt debitate automat la confirmare.
-                        </span>
-                      </span>
-                    </label>
-
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Mod afișare</label>
                       <select
@@ -988,6 +950,61 @@ export default function SettingsPage() {
               disabled={appUpdateSaving || appUpdateLoading}
             >
               {appUpdateSaving ? "Se salvează..." : "Salvează actualizarea"}
+            </Button>
+          </div>
+        </TabContent>
+
+        <TabContent value={TOP_TABS.other} className="mt-6 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Alte setări</CardTitle>
+              <CardDescription>
+                Controlează comportamentele aplicației care nu țin de modalul de actualizare.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {appUpdateLoading ? (
+                <AdminFormGridSkeleton fields={1} />
+              ) : (
+                <label className="flex items-start gap-3 rounded-lg border border-border p-4">
+                  <input
+                    type="checkbox"
+                    className="mt-1 size-4"
+                    checked={appUpdateState.bookingPreauthorizationEnabled}
+                    onChange={(event) =>
+                      updateAppUpdateField(
+                        "bookingPreauthorizationEnabled",
+                        event.target.checked
+                      )
+                    }
+                  />
+                  <span>
+                    <span className="block text-sm font-medium">
+                      Autorizează garanția înainte de trimiterea cererii
+                    </span>
+                    <span className="block text-sm text-muted-foreground">
+                      Suma este blocată înainte ca cererea să fie trimisă prestatorului și este debitată automat numai după confirmarea acestuia.
+                    </span>
+                  </span>
+                </label>
+              )}
+            </CardContent>
+          </Card>
+
+          <div className="flex items-center justify-end gap-3">
+            {appUpdateSaveError && (
+              <p className="text-sm text-rose-500">{appUpdateSaveError}</p>
+            )}
+            {appUpdateSaveOk && !appUpdateSaveError && (
+              <p className="text-sm text-emerald-600">
+                Setările au fost salvate.
+              </p>
+            )}
+            <Button
+              onClick={saveAppUpdateSettings}
+              disabled={appUpdateSaving || appUpdateLoading}
+            >
+              {appUpdateSaving ? "Se salvează..." : "Salvează setările"}
             </Button>
           </div>
         </TabContent>

@@ -65,26 +65,25 @@ describe("admin app update settings route", () => {
     mocks.adminAuthErrorResponse.mockReturnValue(null);
   });
 
-  it("returns defaults that include paymentDemoModeEnabled on GET", async () => {
+  it("returns defaults that include booking preauthorization on GET", async () => {
     const response = await GET(new Request("https://example.com/api/admin/app-update-settings"));
     const json = await response.json();
 
     expect(response.status).toBe(200);
-    expect(json.item.paymentDemoModeEnabled).toBe(false);
     expect(json.item.bookingPreauthorizationEnabled).toBe(false);
     expect(json.item.platformFeePercent).toBe(20);
-    expect(json.defaults.paymentDemoModeEnabled).toBe(false);
     expect(json.defaults.bookingPreauthorizationEnabled).toBe(false);
+    expect(json.item).not.toHaveProperty("paymentDemoModeEnabled");
+    expect(json.defaults).not.toHaveProperty("paymentDemoModeEnabled");
     expect(json.defaults.platformFeePercent).toBe(20);
   });
 
-  it("persists paymentDemoModeEnabled on PUT", async () => {
+  it("persists booking preauthorization on PUT", async () => {
     const response = await PUT(new Request("https://example.com/api/admin/app-update-settings", {
       method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         enabled: false,
-        paymentDemoModeEnabled: true,
         bookingPreauthorizationEnabled: true,
         platformFeePercent: 17.5,
         mode: "notice",
@@ -94,12 +93,11 @@ describe("admin app update settings route", () => {
     const json = await response.json();
 
     expect(response.status).toBe(200);
-    expect(json.item.paymentDemoModeEnabled).toBe(true);
     expect(json.item.bookingPreauthorizationEnabled).toBe(true);
+    expect(json.item).not.toHaveProperty("paymentDemoModeEnabled");
     expect(json.item.platformFeePercent).toBe(17.5);
     expect(mocks.setDoc).toHaveBeenCalledWith(
       expect.objectContaining({
-        paymentDemoModeEnabled: true,
         bookingPreauthorizationEnabled: true,
         platformFeePercent: 17.5,
       }),

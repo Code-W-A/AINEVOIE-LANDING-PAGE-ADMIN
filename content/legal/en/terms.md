@@ -1,4 +1,4 @@
-**Last updated:** 29 April 2026
+**Last updated:** 9 August 2026
 
 These Terms & Conditions ("**Terms**") govern access to and use of the Ainevoie website, provider onboarding flow, account areas, newsletter, contact form, and any related marketplace features that are made available from time to time (together, the "**Platform**"). Ainevoie is a marketplace for connecting customers with independent service providers, including cleaning and related services.
 
@@ -6,7 +6,7 @@ By using the Platform or creating an account, you confirm that you have read and
 
 ## 1. Operator and contact
 
-The Platform is operated by the legal entity responsible for Ainevoie, established in Romania and identified in the public contact details of the Platform. Until full company details are published in the dedicated legal notice, you can contact us at **contact@ai-nevoie.ro**.
+The Platform is operated by the legal entity responsible for Ainevoie, established in Romania and identified in the public contact details of the Platform. The Operator's activity related to the website and application includes, for CAEN classification purposes, business and management consultancy activities (**CAEN 7020**). Until full company details are published in the dedicated legal notice, you can contact us at **contact@ai-nevoie.ro**.
 
 ## 2. Eligibility
 
@@ -14,7 +14,7 @@ You must be at least 18 years old to create an account, submit provider onboardi
 
 ## 3. Nature of the Platform
 
-Ainevoie facilitates discovery, communication, onboarding, scheduling, and, where enabled, payment or subscription flows. Unless expressly stated otherwise, Ainevoie does not itself provide the cleaning or related services displayed on the Platform and is not a party to the service contract between a customer and an independent provider.
+Ainevoie facilitates discovery, communication, onboarding, scheduling, and, where enabled, payment or subscription flows. The User expressly understands and accepts that the Platform acts exclusively as a technical intermediary and a virtual space connecting customers with independent cleaning service Providers. Unless expressly stated otherwise, the Platform Operator does not provide cleaning services, is not an employer, agent, principal, partner, or associate of the cleaning service Providers, and does not exercise any operational control or supervision over their activity. The Operator is not a party to the service contract between a customer and an independent provider.
 
 Providers are independent professionals or businesses. They are responsible for the legality, quality, safety, price, tax treatment, insurance, authorisations, and performance of their services.
 
@@ -77,32 +77,46 @@ The Ainevoie name, logo, interface, text, graphics, software, and other Platform
 
 The Platform may rely on or link to third-party services such as Firebase/Google Cloud, Stripe, email delivery services, hosting, analytics, error monitoring, or content tools. Their own terms and privacy notices may apply. We are not responsible for third-party services outside our control.
 
-## 13. Disclaimers
+## 13. Nature of the intermediary and operational control
+
+The User expressly understands and accepts that the Platform acts exclusively as a technical intermediary and a virtual space connecting customers with independent cleaning service Providers. The Platform Operator does not provide cleaning services, is not an employer, agent, principal, partner, or associate of the cleaning service Providers, and does not exercise any operational control or supervision over their activity.
+
+## 14. Exclusion of liability for damages
+
+In accordance with the applicable legal provisions regarding the independence of the intermediary and to the maximum extent permitted by law, the Platform Operator shall not be held liable, in any situation, for any material damages (including, but not limited to: destruction, damage, or loss of goods, equipment, finishes, or surfaces at the Customer's location), moral damages, bodily injury, or any other direct or indirect damages caused by the cleaning service Provider, or by its employees, collaborators, or subcontractors, during or in connection with the performance of services contracted through the Platform.
+
+## 15. Direct liability of the Provider
+
+Full civil, contractual, or tort liability for the quality of cleaning services and for any damage caused at the Customer's location rests exclusively and entirely with the cleaning service Provider that accepted and performed the order. Any claim, dispute, or request for compensation made by the Customer shall be addressed directly and exclusively to the relevant service Provider, the Platform Operator being released from any obligation to pay or to mediate patrimonial disputes, to the maximum extent permitted by law.
+
+## 16. Limited warranties regarding provider verification
+
+The Platform Operator makes reasonable efforts to verify the identity and registration documents submitted by service Providers at the time of enrolment on the Platform. However, the Operator does not guarantee the integrity, professional conduct, solvency, or quality of the services provided by them. The Customer fully assumes the risk of selecting and allowing the Provider access to their private premises.
+
+## 17. Platform disclaimers and limitation of liability
 
 The Platform is provided on an "as is" and "as available" basis to the maximum extent permitted by law. We do not guarantee uninterrupted operation, error-free functionality, continuous availability of any provider, or any specific service outcome.
-
-Nothing in these Terms limits statutory consumer rights or liability that cannot be excluded under mandatory law.
-
-## 14. Limitation of liability
 
 To the maximum extent permitted by law, Ainevoie is not liable for indirect, incidental, special, consequential, punitive, or loss-of-profit damages arising from use of the Platform. Where liability cannot be excluded, it is limited to the extent permitted by applicable law.
 
 Ainevoie is not responsible for the conduct, omissions, service quality, tax compliance, insurance, authorisations, or statements of independent customers or providers, except where mandatory law states otherwise.
 
-## 15. Account suspension and termination
+Nothing in these Terms limits statutory consumer rights or liability that cannot be excluded under mandatory law.
+
+## 18. Account suspension and termination
 
 We may suspend or terminate access where necessary to enforce these Terms, protect users, prevent fraud or abuse, comply with law, or respond to security risks. You may request account deletion by contacting us or using available account settings. Certain records may be retained where required by law, dispute handling, fraud prevention, accounting, or security.
 
-## 16. Changes to the Terms
+## 19. Changes to the Terms
 
 We may update these Terms. We will publish the new version and update the date above. Material changes may also be communicated by email, notice, or in-app message where appropriate. Continued use after the effective date means acceptance of the updated Terms, where permitted by law.
 
-## 17. Governing law and disputes
+## 20. Governing law and disputes
 
 These Terms are governed by Romanian law, without prejudice to mandatory consumer protections that may apply in your country of residence. The competent Romanian courts will have jurisdiction, unless mandatory law provides another forum.
 
 Before starting formal proceedings, we encourage you to contact us so we can try to resolve the issue amicably.
 
-## 18. Contact
+## 21. Contact
 
 For questions about these Terms, contact **contact@ai-nevoie.ro**.

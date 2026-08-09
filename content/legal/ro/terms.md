@@ -1,4 +1,4 @@
-**Ultima actualizare:** 29 aprilie 2026
+**Ultima actualizare:** 9 august 2026
 
 Acești Termeni și Condiții („**Termeni**”) reglementează accesarea și utilizarea website-ului Ainevoie, fluxului de onboarding pentru prestatori, zonelor de cont, newsletterului, formularului de contact și oricăror funcționalități marketplace conexe puse la dispoziție periodic (împreună, „**Platforma**”). Ainevoie este un marketplace care facilitează conectarea clienților cu prestatori independenți, inclusiv pentru servicii de curățenie și servicii conexe.
 
@@ -6,7 +6,7 @@ Prin utilizarea Platformei sau crearea unui cont, confirmi că ai citit și acce
 
 ## 1. Operator și contact
 
-Platforma este operată de entitatea juridică responsabilă pentru Ainevoie, stabilită în România și identificată prin datele publice de contact ale Platformei. Până la publicarea datelor complete ale societății în nota legală dedicată, ne poți contacta la **contact@ai-nevoie.ro**.
+Platforma este operată de entitatea juridică responsabilă pentru Ainevoie, stabilită în România și identificată prin datele publice de contact ale Platformei. Activitatea Operatorului legată de website și aplicație include, în sensul clasificării CAEN, activități de consultanță în afaceri și management (**CAEN 7020**). Până la publicarea datelor complete ale societății în nota legală dedicată, ne poți contacta la **contact@ai-nevoie.ro**.
 
 ## 2. Eligibilitate
 
@@ -14,7 +14,7 @@ Trebuie să ai cel puțin 18 ani pentru a crea un cont, pentru a transmite infor
 
 ## 3. Natura Platformei
 
-Ainevoie facilitează descoperirea, comunicarea, onboardingul, programarea și, acolo unde este activat, plata sau abonarea. Cu excepția cazului în care se precizează expres altfel, Ainevoie nu prestează direct serviciile de curățenie sau serviciile conexe afișate în Platformă și nu este parte la contractul de prestări servicii dintre client și prestatorul independent.
+Ainevoie facilitează descoperirea, comunicarea, onboardingul, programarea și, acolo unde este activat, plata sau abonarea. Utilizatorul înțelege și acceptă în mod expres faptul că Platforma acționează exclusiv ca un intermediar tehnic și un spațiu virtual de legătură între clienți și Furnizorii independenți de servicii de curățenie. Cu excepția cazului în care se precizează expres altfel, Operatorul Platformei nu prestează servicii de curățenie, nu are calitatea de angajator, prepus, comitent, partener sau asociat al Furnizorilor de servicii de curățenie și nu exercită niciun control operațional sau de supervizare asupra activității acestora din urmă. Operatorul nu este parte la contractul de prestări servicii dintre client și prestatorul independent.
 
 Prestatorii sunt profesioniști sau companii independente. Ei răspund pentru legalitatea, calitatea, siguranța, prețul, tratamentul fiscal, asigurările, autorizațiile și executarea serviciilor lor.
 
@@ -77,32 +77,46 @@ Numele Ainevoie, logo-ul, interfața, textele, grafica, software-ul și celelalt
 
 Platforma poate utiliza sau trimite către servicii terțe precum Firebase/Google Cloud, Stripe, servicii de email, hosting, analiză, monitorizare erori sau instrumente de conținut. Termenii și politicile lor de confidențialitate se pot aplica. Nu răspundem pentru servicii terțe aflate în afara controlului nostru.
 
-## 13. Declarații de exonerare
+## 13. Natura intermediarului și controlul operațional
+
+Utilizatorul înțelege și acceptă în mod expres faptul că Platforma acționează exclusiv ca un intermediar tehnic și un spațiu virtual de legătură între clienți și Furnizorii independenți de servicii de curățenie. Operatorul Platformei nu prestează servicii de curățenie, nu are calitatea de angajator, prepus, comitent, partener sau asociat al Furnizorilor de servicii de curățenie și nu exercită niciun control operațional sau de supervizare asupra activității acestora din urmă.
+
+## 14. Exonerarea de răspundere pentru prejudicii
+
+În conformitate cu prevederile legale aplicabile privind independența intermediarului și în măsura maximă permisă de lege, Operatorul Platformei nu va putea fi ținut răspunzător, în nicio situație, pentru niciun fel de prejudicii materiale (inclusiv, dar fără a se limita la: distrugerea, deteriorarea sau pierderea unor bunuri, echipamente, finisaje sau suprafețe din locația Clientului), prejudicii morale, vătămări corporale sau orice alte daune directe ori indirecte cauzate de către Furnizorul de servicii de curățenie, de angajații, colaboratorii sau subcontractanții acestuia, în timpul sau în legătură cu executarea serviciilor contractate prin intermediul Platformei.
+
+## 15. Răspunderea directă a Furnizorului
+
+Întreaga răspundere civilă, contractuală sau delictuală, pentru calitatea serviciilor de curățenie și pentru orice pagube produse în locația Clientului revine în mod exclusiv și integral Furnizorului de servicii de curățenie care a acceptat și a executat comanda. Orice reclamație, litigiu sau cerere de despăgubire formulată de Client va fi adresată în mod direct și exclusiv Furnizorului de servicii în cauză, Operatorul Platformei fiind exonerat de orice obligație de plată sau de mediere a disputelor patrimoniale, în măsura maximă permisă de lege.
+
+## 16. Garanții limitate privind verificarea prestatorilor
+
+Operatorul Platformei depune eforturi rezonabile pentru verificarea identității și a documentelor de înregistrare transmise de Furnizorii de servicii la momentul înscrierii pe Platformă. Totuși, Operatorul nu garantează integritatea, conduita profesională, solvabilitatea sau calitatea serviciilor prestate de aceștia. Clientul își asumă în mod deplin riscul selectării și permiterii accesului Furnizorului în spațiile sale private.
+
+## 17. Declarații de exonerare și limitarea răspunderii Platformei
 
 Platforma este furnizată „ca atare” și „în funcție de disponibilitate”, în măsura maximă permisă de lege. Nu garantăm funcționarea neîntreruptă, lipsa erorilor, disponibilitatea continuă a unui prestator sau un rezultat specific al serviciului.
-
-Nimic din acești Termeni nu limitează drepturile legale ale consumatorilor sau răspunderea care nu poate fi exclusă potrivit legii obligatorii.
-
-## 14. Limitarea răspunderii
 
 În măsura maximă permisă de lege, Ainevoie nu răspunde pentru daune indirecte, incidentale, speciale, consecutive, punitive sau pierderi de profit rezultate din utilizarea Platformei. Acolo unde răspunderea nu poate fi exclusă, aceasta este limitată în măsura permisă de lege.
 
 Ainevoie nu răspunde pentru conduita, omisiunile, calitatea serviciilor, conformitatea fiscală, asigurările, autorizațiile sau declarațiile clienților sau prestatorilor independenți, cu excepția cazurilor în care legea obligatorie prevede altfel.
 
-## 15. Suspendarea și închiderea contului
+Nimic din acești Termeni nu limitează drepturile legale ale consumatorilor sau răspunderea care nu poate fi exclusă potrivit legii obligatorii.
+
+## 18. Suspendarea și închiderea contului
 
 Putem suspenda sau închide accesul atunci când este necesar pentru aplicarea acestor Termeni, protejarea utilizatorilor, prevenirea fraudei sau abuzului, respectarea legii sau gestionarea riscurilor de securitate. Poți solicita ștergerea contului contactându-ne sau folosind setările disponibile ale contului. Anumite evidențe pot fi păstrate atunci când este necesar pentru obligații legale, dispute, prevenirea fraudei, contabilitate sau securitate.
 
-## 16. Modificarea Termenilor
+## 19. Modificarea Termenilor
 
 Putem actualiza acești Termeni. Vom publica noua versiune și vom actualiza data de mai sus. Modificările importante pot fi comunicate și prin email, notificare sau mesaj în aplicație, după caz. Continuarea utilizării după data intrării în vigoare înseamnă acceptarea Termenilor actualizați, în măsura permisă de lege.
 
-## 17. Legea aplicabilă și litigii
+## 20. Legea aplicabilă și litigii
 
 Acești Termeni sunt guvernați de legea română, fără a afecta protecțiile obligatorii ale consumatorilor care se pot aplica în țara ta de reședință. Instanțele române competente vor avea jurisdicție, cu excepția cazurilor în care legea obligatorie prevede alt for.
 
 Înainte de inițierea unor proceduri formale, te încurajăm să ne contactezi pentru a încerca rezolvarea amiabilă a problemei.
 
-## 18. Contact
+## 21. Contact
 
 Pentru întrebări privind acești Termeni, scrie-ne la **contact@ai-nevoie.ro**.

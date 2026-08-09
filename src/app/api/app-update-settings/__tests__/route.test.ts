@@ -42,10 +42,9 @@ describe("public app update settings route", () => {
     mocks.setDocData(null);
   });
 
-  it("returns paymentDemoModeEnabled from persisted settings", async () => {
+  it("returns booking preauthorization from persisted settings", async () => {
     mocks.setDocData({
       enabled: true,
-      paymentDemoModeEnabled: true,
       bookingPreauthorizationEnabled: true,
       mode: "notice",
       urls: {
@@ -58,16 +57,16 @@ describe("public app update settings route", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
-    expect(json.item.paymentDemoModeEnabled).toBe(true);
     expect(json.item.bookingPreauthorizationEnabled).toBe(true);
+    expect(json.item).not.toHaveProperty("paymentDemoModeEnabled");
   });
 
-  it("returns default paymentDemoModeEnabled when document is missing", async () => {
+  it("returns default booking preauthorization when document is missing", async () => {
     const response = await GET();
     const json = await response.json();
 
     expect(response.status).toBe(200);
-    expect(json.item.paymentDemoModeEnabled).toBe(false);
     expect(json.item.bookingPreauthorizationEnabled).toBe(false);
+    expect(json.item).not.toHaveProperty("paymentDemoModeEnabled");
   });
 });

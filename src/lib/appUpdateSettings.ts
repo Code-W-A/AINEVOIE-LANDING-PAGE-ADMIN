@@ -6,7 +6,6 @@ export type AppUpdateLocale = "ro" | "en";
 
 export type AppUpdateSettings = {
   enabled: boolean;
-  paymentDemoModeEnabled: boolean;
   bookingPreauthorizationEnabled: boolean;
   platformFeePercent: number;
   minPayoutAmount: number;
@@ -30,7 +29,6 @@ const DEFAULT_REVISION = "mobile-update-default";
 export function getDefaultAppUpdateSettings(): AppUpdateSettings {
   return {
     enabled: false,
-    paymentDemoModeEnabled: false,
     bookingPreauthorizationEnabled: false,
     platformFeePercent: 20,
     minPayoutAmount: 50,
@@ -99,7 +97,6 @@ function sanitizeUrl(value: unknown) {
 function buildRevision(settings: AppUpdateSettings) {
   return [
     settings.enabled ? "enabled" : "disabled",
-    settings.paymentDemoModeEnabled ? "payment-demo-enabled" : "payment-demo-disabled",
     settings.bookingPreauthorizationEnabled ? "booking-preauth-enabled" : "booking-preauth-disabled",
     settings.platformFeePercent,
     settings.minPayoutAmount,
@@ -128,7 +125,6 @@ export function sanitizeAppUpdateSettings(raw: unknown): AppUpdateSettings {
 
   const settings: AppUpdateSettings = {
     enabled: source.enabled === true,
-    paymentDemoModeEnabled: source.paymentDemoModeEnabled === true,
     bookingPreauthorizationEnabled: source.bookingPreauthorizationEnabled === true,
     platformFeePercent: sanitizePlatformFeePercent(source.platformFeePercent),
     minPayoutAmount: sanitizeMinPayoutAmount(source.minPayoutAmount),
@@ -176,7 +172,6 @@ export function validateAppUpdateSettings(settings: AppUpdateSettings) {
 export function getPublicAppUpdateSettings(settings: AppUpdateSettings) {
   return {
     enabled: settings.enabled,
-    paymentDemoModeEnabled: settings.paymentDemoModeEnabled,
     bookingPreauthorizationEnabled: settings.bookingPreauthorizationEnabled,
     platformFeePercent: settings.platformFeePercent,
     minPayoutAmount: settings.minPayoutAmount,
