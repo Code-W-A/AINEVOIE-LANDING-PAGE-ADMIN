@@ -33,7 +33,17 @@ import {
 } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
 import { ref, uploadBytes } from "firebase/storage";
-import { ChevronDown, Eye, EyeOff, FileCheck2, ImagePlus, Loader2, UploadCloud } from "lucide-react";
+import {
+  ChevronDown,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  FileCheck2,
+  ImagePlus,
+  Info,
+  Loader2,
+  UploadCloud,
+} from "lucide-react";
 import { Link, useRouter } from "@/i18n/navigation";
 import Image from "next/image";
 import { useLocale, useTranslations } from "next-intl";
@@ -46,6 +56,29 @@ import { isValidPhoneNumber } from "libphonenumber-js";
 import "react-phone-number-input/style.css";
 
 import { cn } from "@/lib/utils";
+
+const ONRC_LEGAL_GUIDE_LINKS = [
+  {
+    key: "pfa",
+    href: "https://www.onrc.ro/index.php/ro/inmatriculari/persoane-fizice/persoane-fizice-autorizate-pfa",
+    labelKey: "legalGuideLinkPfa" as const,
+  },
+  {
+    key: "ii",
+    href: "https://www.onrc.ro/index.php/ro/inmatriculari/persoane-fizice/intreprindere-individuala",
+    labelKey: "legalGuideLinkIi" as const,
+  },
+  {
+    key: "if",
+    href: "https://www.onrc.ro/index.php/ro/inmatriculari/persoane-fizice/intreprindere-familiala",
+    labelKey: "legalGuideLinkIf" as const,
+  },
+  {
+    key: "srl",
+    href: "https://www.onrc.ro/index.php/ro/inmatriculari/persoane-juridice",
+    labelKey: "legalGuideLinkSrl" as const,
+  },
+] as const;
 
 type FormValues = {
   fullName: string;
@@ -279,6 +312,7 @@ export default function ProviderOnboardingFormWizard({
   });
   const [finalSubmitting, setFinalSubmitting] = useState(false);
   const [finalError, setFinalError] = useState<string | null>(null);
+  const [legalGuideOpen, setLegalGuideOpen] = useState(false);
   const [serviceTypeEntries, setServiceTypeEntries] = useState<ProviderServiceTypeItem[]>(
     DEFAULT_PROVIDER_SERVICE_TYPES
   );
@@ -343,6 +377,15 @@ export default function ProviderOnboardingFormWizard({
   const hasValidEmailForNewsletter = isValidEmail(normalizedEmail);
   const isLegalEntityReady = legalStatus === "pfa_ready" || legalStatus === "srl_ready";
   const isEntityInProgress = legalStatus === "in_progress";
+  const shouldAutoOpenLegalGuide =
+    legalStatus === "need_guidance" || legalStatus === "in_progress";
+
+  useEffect(() => {
+    if (shouldAutoOpenLegalGuide) {
+      setLegalGuideOpen(true);
+    }
+  }, [shouldAutoOpenLegalGuide]);
+
   const selectedCityRecord = useMemo(
     () => findRomaniaCity(selectedCountyCode, selectedCityCode),
     [selectedCountyCode, selectedCityCode]
@@ -1630,6 +1673,58 @@ export default function ProviderOnboardingFormWizard({
             {errors.legalStatus?.message && (
               <p className="mt-2 text-xs text-red-500">{errors.legalStatus.message}</p>
             )}
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={() => setLegalGuideOpen((current) => !current)}
+                className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+                aria-expanded={legalGuideOpen}
+              >
+                <Info className="h-4 w-4 shrink-0" aria-hidden="true" />
+                {legalGuideOpen ? t("legalGuideToggleHide") : t("legalGuideToggleShow")}
+              </button>
+
+              {legalGuideOpen ? (
+                <div className="mt-3 rounded-md border border-border bg-muted/30 p-3 sm:p-4">
+                  <p className="text-sm font-semibold text-foreground">{t("legalGuideTitle")}</p>
+                  <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                    {t("legalGuideDisclaimer")}
+                  </p>
+                  <p className="mt-3 text-sm text-foreground">{t("legalGuideFormsIntro")}</p>
+                  <ul className="mt-3 space-y-2">
+                    {ONRC_LEGAL_GUIDE_LINKS.map((item) => (
+                      <li key={item.key}>
+                        <a
+                          href={item.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-start justify-between gap-3 rounded-md border border-border bg-background px-3 py-2.5 text-sm transition-colors hover:border-primary/40"
+                        >
+                          <span>
+                            <span className="block font-medium text-foreground">
+                              {t(item.labelKey)}
+                            </span>
+                            <span className="mt-0.5 block text-xs text-primary">
+                              {t("legalGuideOpenOfficial")}
+                            </span>
+                          </span>
+                          <ExternalLink
+                            className="mt-0.5 h-4 w-4 shrink-0 text-primary"
+                            aria-hidden="true"
+                          />
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="mt-4 border-t border-border pt-3">
+                    <p className="text-sm font-medium text-foreground">{t("legalGuideCaenTitle")}</p>
+                    <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
+                      {t("legalGuideCaenBody")}
+                    </p>
+                  </div>
+                </div>
+              ) : null}
+            </div>
           </fieldset>
 
           {isLegalEntityReady && (
