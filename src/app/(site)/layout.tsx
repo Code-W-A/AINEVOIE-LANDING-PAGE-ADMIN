@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { inter } from "@/lib/fonts";
 import { getMetadataBase } from "@/lib/seo";
 import { getLocale } from "next-intl/server";
+import MetaPixel from "@/components/analytics/MetaPixel";
 
 export const metadata: Metadata = {
   metadataBase: getMetadataBase(),
@@ -21,7 +22,10 @@ export default async function SiteRootLayout({
 
   return (
     <html lang={locale} suppressHydrationWarning>
-      <body className={inter.className}>{children}</body>
+      <body className={inter.className}>
+        <MetaPixel />
+        {children}
+      </body>
     </html>
   );
 }

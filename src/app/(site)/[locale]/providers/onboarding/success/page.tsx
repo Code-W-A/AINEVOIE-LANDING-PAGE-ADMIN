@@ -1,4 +1,5 @@
 import { Link } from "@/i18n/navigation";
+import { MetaPixelLeadEvent } from "@/components/analytics/MetaPixel";
 import { routing } from "@/i18n/routing";
 import { CheckCircle2, CircleHelp, MailCheck, ShieldCheck } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
@@ -36,6 +37,7 @@ export default async function ProviderOnboardingSuccessPage({
 
   return (
     <main className="pb-24 pt-[160px]">
+      <MetaPixelLeadEvent />
       <section className="container max-w-[1100px]">
         <div className="mx-auto max-w-[820px] rounded-2xl bg-white p-8 text-center shadow-card dark:bg-dark dark:shadow-card-dark sm:p-10">
           <div className="bg-primary/10 mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full">
