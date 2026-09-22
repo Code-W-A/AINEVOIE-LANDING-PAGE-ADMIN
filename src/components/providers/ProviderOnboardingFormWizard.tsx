@@ -1,6 +1,5 @@
 "use client";
 
-import AppStoreLinks from "@/components/AppStoreLinks";
 import {
   trackMetaCustomEvent,
   trackMetaStandardEvent,
@@ -2193,23 +2192,6 @@ export default function ProviderOnboardingFormWizard({
 
       {currentStep === 4 && (
         <div className="space-y-4">
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 sm:p-5 dark:border-emerald-900/60 dark:bg-emerald-950/30">
-            <p className="font-semibold text-emerald-900 dark:text-emerald-100">
-              {t("phaseOneTitle")}
-            </p>
-            <p className="mt-1.5 text-sm leading-6 text-emerald-800 dark:text-emerald-200">
-              {t("phaseOneDescription")}
-            </p>
-            <AppStoreLinks
-              androidLabel={t("downloadAndroid")}
-              iosLabel={t("downloadIos")}
-              compact
-              className="mt-4"
-            />
-            <p className="mt-3 text-xs text-emerald-800 dark:text-emerald-200">
-              {t("continueOnWeb")}
-            </p>
-          </div>
           <div className="flex items-center gap-3">
             <ImagePlus className="text-primary h-5 w-5" />
             <p className="text-muted-foreground text-sm">{t("avatarIntro")}</p>

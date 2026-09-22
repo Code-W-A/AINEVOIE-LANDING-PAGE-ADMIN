@@ -53,20 +53,6 @@ export default async function ProviderOnboardingSuccessPage({
           </p>
         </div>
 
-        <div className="shadow-card dark:bg-dark dark:shadow-card-dark mt-8 rounded-2xl bg-white p-6 text-center sm:p-8">
-          <h2 className="text-2xl font-semibold text-black dark:text-white">
-            {t("downloadTitle")}
-          </h2>
-          <p className="text-body mx-auto mt-2 max-w-[620px] text-sm">
-            {t("downloadDescription")}
-          </p>
-          <AppStoreLinks
-            androidLabel={t("downloadAndroid")}
-            iosLabel={t("downloadIos")}
-            className="mt-5 justify-center"
-          />
-        </div>
-
         <div className="mt-8 grid gap-6 md:grid-cols-3">
           {nextSteps.map((step) => (
             <article
@@ -103,6 +89,23 @@ export default async function ProviderOnboardingSuccessPage({
               </p>
             </div>
           </div>
+        </div>
+
+        <div className="shadow-card dark:bg-dark dark:shadow-card-dark mt-8 rounded-2xl bg-white p-6 text-center sm:p-8">
+          <h2 className="text-2xl font-semibold text-black dark:text-white">
+            {t("downloadTitle")}
+          </h2>
+          <p className="text-body mx-auto mt-2 max-w-[620px] text-sm">
+            {t("downloadDescription")}
+          </p>
+          <AppStoreLinks
+            androidLabel={t("downloadAndroid")}
+            iosLabel={t("downloadIos")}
+            className="mt-5 justify-center"
+          />
+          <p className="text-body mx-auto mt-4 max-w-[620px] text-sm">
+            {t("downloadStatusHint")}
+          </p>
         </div>
 
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
