@@ -36,7 +36,9 @@ export default function HorizontalTimelineStepper({
   return (
     <div className="w-full rounded-xl border border-border bg-background/60 p-3 sm:p-4">
       <p className="mb-3 text-xs font-medium text-muted-foreground sm:hidden">
-        {t("stepperMobile", { step: safeStep, label: currentLabel })}
+        {safeStep <= 3
+          ? t("stepperMobilePhaseOne", { step: safeStep, label: currentLabel })
+          : t("stepperMobilePhaseTwo", { step: safeStep, label: currentLabel })}
       </p>
 
       <div className="relative">
@@ -67,7 +69,7 @@ export default function HorizontalTimelineStepper({
                 >
                   {isCompleted ? <Check className="h-3.5 w-3.5" /> : step.id}
                 </span>
-                <span className="mt-2 max-w-[86px] text-center text-[11px] leading-tight text-muted-foreground sm:max-w-none sm:text-xs">
+                <span className="mt-2 hidden max-w-[86px] text-center text-[11px] leading-tight text-muted-foreground sm:block sm:max-w-none sm:text-xs">
                   {step.label}
                 </span>
               </div>

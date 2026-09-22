@@ -16,15 +16,17 @@ export default function ProviderOnboardingFormCard({
   const t = useTranslations("ProviderForm");
 
   return (
-    <div className="w-full rounded-2xl border border-border bg-white p-6 shadow-sm dark:bg-dark sm:p-8">
+    <div className="border-border dark:bg-dark w-full rounded-2xl border bg-white p-6 shadow-sm sm:p-8">
       <h2 className="mb-2 text-2xl font-semibold text-black dark:text-white">
         {t("cardTitle")}
       </h2>
 
-      <div className="mb-4 border-b border-border pb-4 sm:mb-5 sm:pb-5">
+      <div className="border-border mb-4 border-b pb-4 sm:mb-5 sm:pb-5">
         <HorizontalTimelineStepper currentStep={currentStep} />
-        <p className="mt-3 text-sm text-muted-foreground">
-          {t("stepHint", { step: currentStep })}
+        <p className="text-muted-foreground mt-3 text-sm">
+          {currentStep <= 3
+            ? t("stepHintPhaseOne", { step: currentStep })
+            : t("stepHintPhaseTwo", { step: currentStep })}
         </p>
       </div>
 

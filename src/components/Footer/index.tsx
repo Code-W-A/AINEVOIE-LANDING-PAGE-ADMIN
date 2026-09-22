@@ -1,6 +1,7 @@
 "use client";
 
 import { Checkbox } from "@/components/ui/checkbox";
+import AppStoreLinks from "@/components/AppStoreLinks";
 import FooterBottom from "@/components/Footer/FooterBottom";
 import { Link } from "@/i18n/navigation";
 import { FooterMenu } from "@/types/footerMenu";
@@ -46,7 +47,7 @@ const Footer = () => {
         ],
       },
     ],
-    [t]
+    [t],
   );
 
   const [footerEmail, setFooterEmail] = useState("");
@@ -56,7 +57,7 @@ const Footer = () => {
   >("idle");
 
   async function handleFooterNewsletterSubmit(
-    e: React.FormEvent<HTMLFormElement>
+    e: React.FormEvent<HTMLFormElement>,
   ) {
     e.preventDefault();
 
@@ -85,22 +86,20 @@ const Footer = () => {
       });
 
       if (res.ok) {
-        const payload = (await res.json().catch(() => null)) as
-          | { status?: string }
-          | null;
+        const payload = (await res.json().catch(() => null)) as {
+          status?: string;
+        } | null;
         const isAlready = payload?.status === "already_subscribed";
-        toast.success(
-          isAlready ? t("toastAlready") : t("toastSubscribed")
-        );
+        toast.success(isAlready ? t("toastAlready") : t("toastSubscribed"));
         setFooterStatus("success");
         setFooterEmail("");
         setFooterAcceptTerms(false);
         return;
       }
 
-      const errBody = (await res.json().catch(() => null)) as
-        | { error?: string }
-        | null;
+      const errBody = (await res.json().catch(() => null)) as {
+        error?: string;
+      } | null;
       const serverMsg =
         typeof errBody?.error === "string" ? errBody.error : null;
       setFooterStatus("error");
@@ -108,7 +107,7 @@ const Footer = () => {
         serverMsg ??
           (res.status === 503
             ? t("toastNewsletterDown")
-            : t("toastSubscribeFail"))
+            : t("toastSubscribeFail")),
       );
     } catch {
       setFooterStatus("error");
@@ -119,7 +118,7 @@ const Footer = () => {
   return (
     <>
       <footer>
-        <div className="bg-[#F8FAFB] pb-[46px] pt-[95px] dark:bg-[#15182A]">
+        <div className="bg-[#F8FAFB] pt-[95px] pb-[46px] dark:bg-[#15182A]">
           <div className="container max-w-[1390px]">
             <div className="-mx-4 flex flex-wrap">
               <div className="w-full px-4 lg:w-4/12 xl:w-5/12">
@@ -144,7 +143,15 @@ const Footer = () => {
                       style={{ width: "auto", height: "auto" }}
                     />
                   </Link>
-                  <p className="mb-6 text-base text-body">{t("tagline")}</p>
+                  <p className="text-body mb-6 text-base">{t("tagline")}</p>
+                  <p className="mb-3 text-sm font-medium text-black dark:text-white">
+                    {t("downloadApp")}
+                  </p>
+                  <AppStoreLinks
+                    androidLabel={t("downloadAndroid")}
+                    iosLabel={t("downloadIos")}
+                    compact
+                  />
                 </div>
               </div>
 
@@ -166,7 +173,7 @@ const Footer = () => {
                               <li key={index}>
                                 <Link
                                   href={item.route}
-                                  className="inline-block text-base text-body hover:text-primary"
+                                  className="text-body hover:text-primary inline-block text-base"
                                 >
                                   {item.label}
                                 </Link>
@@ -200,15 +207,23 @@ const Footer = () => {
                               name="footerAcceptTerms"
                               checked={footerAcceptTerms}
                               disabled={footerStatus === "loading"}
-                              onChange={(event) => setFooterAcceptTerms(event.target.checked)}
+                              onChange={(event) =>
+                                setFooterAcceptTerms(event.target.checked)
+                              }
                               label={
                                 <>
                                   {t("consentAgree")}{" "}
-                                  <Link href="/terms" className="text-primary hover:underline">
+                                  <Link
+                                    href="/terms"
+                                    className="text-primary hover:underline"
+                                  >
                                     {t("terms")}
                                   </Link>{" "}
                                   {t("consentAnd")}{" "}
-                                  <Link href="/privacy" className="text-primary hover:underline">
+                                  <Link
+                                    href="/privacy"
+                                    className="text-primary hover:underline"
+                                  >
                                     {t("privacy")}
                                   </Link>
                                   {t("consentEnd")}
@@ -218,7 +233,9 @@ const Footer = () => {
                           </div>
                           <button
                             type="submit"
-                            disabled={footerStatus === "loading" || !footerAcceptTerms}
+                            disabled={
+                              footerStatus === "loading" || !footerAcceptTerms
+                            }
                             className="bg-primary hover:bg-primary/90 w-full rounded-sm px-5 py-3 text-sm font-medium text-white disabled:opacity-60"
                           >
                             {footerStatus === "loading"

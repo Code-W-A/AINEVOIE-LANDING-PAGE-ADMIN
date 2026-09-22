@@ -1,5 +1,10 @@
 "use client";
 
+import AppStoreLinks from "@/components/AppStoreLinks";
+import {
+  trackMetaCustomEvent,
+  trackMetaStandardEvent,
+} from "@/components/analytics/MetaPixel";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -12,7 +17,11 @@ import {
 import { InputGroup } from "@/components/ui/input-group";
 import { PROVIDER_ONBOARDING_MAX_STEP } from "@/constants/providerOnboarding";
 import { createSquareAvatarFile } from "@/lib/cropImage";
-import { getFirebaseAuth, getFirebaseFunctions, getFirebaseStorage } from "@/lib/firebaseClient";
+import {
+  getFirebaseAuth,
+  getFirebaseFunctions,
+  getFirebaseStorage,
+} from "@/lib/firebaseClient";
 import {
   getDefaultProviderServiceTypeItems,
   type ProviderServiceTypeItem,
@@ -23,7 +32,10 @@ import {
   getCitiesByCounty,
   normalizeRomaniaLocationName,
 } from "@/lib/romaniaLocations";
-import { PROVIDER_LEGAL_STATUSES, type ProviderLegalStatus } from "@/types/provider";
+import {
+  PROVIDER_LEGAL_STATUSES,
+  type ProviderLegalStatus,
+} from "@/types/provider";
 import axios from "axios";
 import {
   onAuthStateChanged,
@@ -124,6 +136,10 @@ type DocumentPreviewState = {
   previewUrl: string | null;
 };
 type EmailStatus = "idle" | "checking" | "available" | "exists" | "error";
+type AccountCreationResult = {
+  created: boolean;
+  uid: string;
+};
 
 const MAX_STEP = PROVIDER_ONBOARDING_MAX_STEP;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
@@ -165,7 +181,8 @@ function assertImageFile(file: File, errorMessage: string) {
 function readCallableError(error: unknown, fallback: string) {
   const err = error as { message?: string; code?: string; details?: unknown };
   if (typeof err.message === "string" && err.message.trim()) {
-    const code = typeof err.code === "string" && err.code.trim() ? err.code.trim() : "";
+    const code =
+      typeof err.code === "string" && err.code.trim() ? err.code.trim() : "";
     return code ? `${err.message} (${code})` : err.message;
   }
   return fallback;
@@ -173,10 +190,14 @@ function readCallableError(error: unknown, fallback: string) {
 
 function readAxiosErrorCode(error: unknown) {
   const err = error as { response?: { data?: { code?: unknown } } };
-  return typeof err.response?.data?.code === "string" ? err.response.data.code : null;
+  return typeof err.response?.data?.code === "string"
+    ? err.response.data.code
+    : null;
 }
 
-async function waitForProviderAuthUser(expectedUid?: string | null): Promise<User> {
+async function waitForProviderAuthUser(
+  expectedUid?: string | null,
+): Promise<User> {
   const auth = getFirebaseAuth();
   const currentUser = auth.currentUser;
   if (currentUser && (!expectedUid || currentUser.uid === expectedUid)) {
@@ -211,7 +232,7 @@ async function waitForProviderAuthUser(expectedUid?: string | null): Promise<Use
         window.clearTimeout(timeoutId);
         unsubscribe();
         reject(error);
-      }
+      },
     );
   });
 }
@@ -222,7 +243,10 @@ function revokeTrackedPreviewUrl(ref: React.MutableRefObject<string | null>) {
   ref.current = null;
 }
 
-function createTrackedPreviewUrl(file: File, ref: React.MutableRefObject<string | null>) {
+function createTrackedPreviewUrl(
+  file: File,
+  ref: React.MutableRefObject<string | null>,
+) {
   revokeTrackedPreviewUrl(ref);
   const previewUrl = URL.createObjectURL(file);
   ref.current = previewUrl;
@@ -255,7 +279,8 @@ function serializeOnboardingError(error: unknown) {
 
   return {
     name: typeof known.name === "string" ? known.name : serialized.name,
-    message: typeof known.message === "string" ? known.message : serialized.message,
+    message:
+      typeof known.message === "string" ? known.message : serialized.message,
     code: typeof known.code === "string" ? known.code : serialized.code,
     details: known.details ?? serialized.details ?? null,
     customData: known.customData ?? serialized.customData ?? null,
@@ -264,18 +289,29 @@ function serializeOnboardingError(error: unknown) {
   };
 }
 
-function logOnboardingClientError(event: string, error: unknown, details?: Record<string, unknown>) {
-  console.error(`[provider-onboarding] ${event}`, {
-    ...details,
-    error: serializeOnboardingError(error),
-  }, error);
+function logOnboardingClientError(
+  event: string,
+  error: unknown,
+  details?: Record<string, unknown>,
+) {
+  console.error(
+    `[provider-onboarding] ${event}`,
+    {
+      ...details,
+      error: serializeOnboardingError(error),
+    },
+    error,
+  );
 }
 
 function isSlotReadyForSubmit(slot: FileSlot) {
   return slot.status === "uploaded" || Boolean(slot.file);
 }
 
-function getServiceTypeLabel(entry: Pick<ProviderServiceTypeItem, "value" | "labels">, locale: string) {
+function getServiceTypeLabel(
+  entry: Pick<ProviderServiceTypeItem, "value" | "labels">,
+  locale: string,
+) {
   const normalizedLocale = locale === "en" ? "en" : "ro";
   return entry.labels[normalizedLocale] || entry.labels.ro || entry.value;
 }
@@ -288,7 +324,10 @@ export default function ProviderOnboardingFormWizard({
   const apiErrors = useTranslations("ApiErrors");
   const locale = useLocale();
   const router = useRouter();
-  const defaultPhoneCountry = useMemo(() => (locale === "en" ? "GB" : "RO"), [locale]);
+  const defaultPhoneCountry = useMemo(
+    () => (locale === "en" ? "GB" : "RO"),
+    [locale],
+  );
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [citySearch, setCitySearch] = useState("");
@@ -300,11 +339,16 @@ export default function ProviderOnboardingFormWizard({
   const [avatarSource, setAvatarSource] = useState<AvatarSource | null>(null);
   const [avatarCrop, setAvatarCrop] = useState({ x: 0, y: 0 });
   const [avatarZoom, setAvatarZoom] = useState(1);
-  const [avatarCroppedAreaPixels, setAvatarCroppedAreaPixels] = useState<Area | null>(null);
+  const [avatarCroppedAreaPixels, setAvatarCroppedAreaPixels] =
+    useState<Area | null>(null);
   const [avatarCropping, setAvatarCropping] = useState(false);
   const [avatar, setAvatar] = useState<FileSlot>(() => emptyFileSlot());
-  const [identityDocument, setIdentityDocument] = useState<FileSlot>(() => emptyFileSlot());
-  const [professionalDocument, setProfessionalDocument] = useState<FileSlot>(() => emptyFileSlot());
+  const [identityDocument, setIdentityDocument] = useState<FileSlot>(() =>
+    emptyFileSlot(),
+  );
+  const [professionalDocument, setProfessionalDocument] = useState<FileSlot>(
+    () => emptyFileSlot(),
+  );
   const [documentPreview, setDocumentPreview] = useState<DocumentPreviewState>({
     open: false,
     title: "",
@@ -313,15 +357,23 @@ export default function ProviderOnboardingFormWizard({
   const [finalSubmitting, setFinalSubmitting] = useState(false);
   const [finalError, setFinalError] = useState<string | null>(null);
   const [legalGuideOpen, setLegalGuideOpen] = useState(false);
-  const [serviceTypeEntries, setServiceTypeEntries] = useState<ProviderServiceTypeItem[]>(
-    DEFAULT_PROVIDER_SERVICE_TYPES
-  );
+  const [serviceTypeEntries, setServiceTypeEntries] = useState<
+    ProviderServiceTypeItem[]
+  >(DEFAULT_PROVIDER_SERVICE_TYPES);
   const cityComboRef = useRef<HTMLDivElement>(null);
   const citySearchInputRef = useRef<HTMLInputElement>(null);
   const avatarSourcePreviewUrlRef = useRef<string | null>(null);
   const avatarPreviewUrlRef = useRef<string | null>(null);
   const identityPreviewUrlRef = useRef<string | null>(null);
   const professionalPreviewUrlRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    trackMetaCustomEvent(
+      "ProviderOnboardingStarted",
+      `provider-onboarding-started:${locale}`,
+      { locale },
+    );
+  }, [locale]);
 
   const legalStatusOptions = useMemo(
     () => [
@@ -330,7 +382,7 @@ export default function ProviderOnboardingFormWizard({
       { value: "in_progress" as const, label: t("legalInProgress") },
       { value: "need_guidance" as const, label: t("legalGuidance") },
     ],
-    [t]
+    [t],
   );
 
   const {
@@ -375,7 +427,8 @@ export default function ProviderOnboardingFormWizard({
   const selectedServiceType = watch("serviceType");
   const normalizedEmail = (emailValue || "").trim().toLowerCase();
   const hasValidEmailForNewsletter = isValidEmail(normalizedEmail);
-  const isLegalEntityReady = legalStatus === "pfa_ready" || legalStatus === "srl_ready";
+  const isLegalEntityReady =
+    legalStatus === "pfa_ready" || legalStatus === "srl_ready";
   const isEntityInProgress = legalStatus === "in_progress";
   const shouldAutoOpenLegalGuide =
     legalStatus === "need_guidance" || legalStatus === "in_progress";
@@ -388,17 +441,19 @@ export default function ProviderOnboardingFormWizard({
 
   const selectedCityRecord = useMemo(
     () => findRomaniaCity(selectedCountyCode, selectedCityCode),
-    [selectedCountyCode, selectedCityCode]
+    [selectedCountyCode, selectedCityCode],
   );
   const availableCities = useMemo(
     () => getCitiesByCounty(selectedCountyCode),
-    [selectedCountyCode]
+    [selectedCountyCode],
   );
   const normalizedCitySearch = normalizeRomaniaLocationName(citySearch);
   const filteredCities = useMemo(() => {
     if (!normalizedCitySearch) return availableCities;
     return availableCities.filter((city) =>
-      normalizeRomaniaLocationName(city.cityName).includes(normalizedCitySearch)
+      normalizeRomaniaLocationName(city.cityName).includes(
+        normalizedCitySearch,
+      ),
     );
   }, [availableCities, normalizedCitySearch]);
 
@@ -420,7 +475,9 @@ export default function ProviderOnboardingFormWizard({
             value: String(item.value || "").trim(),
             labels: {
               ro: String(item.labels?.ro || item.value || "").trim(),
-              en: String(item.labels?.en || item.labels?.ro || item.value || "").trim(),
+              en: String(
+                item.labels?.en || item.labels?.ro || item.value || "",
+              ).trim(),
             },
             enabled: true,
             sortOrder: Number(item.sortOrder) || 0,
@@ -433,8 +490,15 @@ export default function ProviderOnboardingFormWizard({
 
         setServiceTypeEntries(nextEntries);
         const currentServiceType = getValues("serviceType");
-        if (!nextEntries.some((entry: ProviderServiceTypeItem) => entry.value === currentServiceType)) {
-          setValue("serviceType", nextEntries[0].value, { shouldValidate: true });
+        if (
+          !nextEntries.some(
+            (entry: ProviderServiceTypeItem) =>
+              entry.value === currentServiceType,
+          )
+        ) {
+          setValue("serviceType", nextEntries[0].value, {
+            shouldValidate: true,
+          });
         }
       } catch (error) {
         logOnboardingClientError("service_types_load_failed", error);
@@ -453,7 +517,8 @@ export default function ProviderOnboardingFormWizard({
     currentStep === 1 &&
     hasValidEmailForNewsletter &&
     (emailStatus === "checking" ||
-      (emailStatus === "exists" && emailStatusCheckedValue === normalizedEmail));
+      (emailStatus === "exists" &&
+        emailStatusCheckedValue === normalizedEmail));
   const nextDisabled =
     busy || emailCheckBlocksStep || (currentStep === 3 && !acceptTerms);
   const contactComplete =
@@ -467,7 +532,7 @@ export default function ProviderOnboardingFormWizard({
     Boolean(selectedCountyCode) &&
     Boolean(selectedCityRecord) &&
     Boolean(
-      serviceTypeEntries.some((entry) => entry.value === selectedServiceType)
+      serviceTypeEntries.some((entry) => entry.value === selectedServiceType),
     );
   const legalComplete =
     Boolean(legalStatus) &&
@@ -475,7 +540,8 @@ export default function ProviderOnboardingFormWizard({
       (Boolean(companyNameValue?.trim()) && Boolean(cuiValue?.trim()))) &&
     (!isEntityInProgress || Boolean(estimatedSetupTimelineValue?.trim())) &&
     acceptTerms;
-  const avatarComplete = isSlotReadyForSubmit(avatar) && avatar.status !== "error";
+  const avatarComplete =
+    isSlotReadyForSubmit(avatar) && avatar.status !== "error";
   const documentsComplete =
     isSlotReadyForSubmit(identityDocument) &&
     isSlotReadyForSubmit(professionalDocument) &&
@@ -484,9 +550,17 @@ export default function ProviderOnboardingFormWizard({
   const finalChecklist = [
     { key: "contact", label: t("finalContact"), complete: contactComplete },
     { key: "services", label: t("finalServices"), complete: servicesComplete },
-    { key: "confirmation", label: t("finalConfirmation"), complete: legalComplete },
+    {
+      key: "confirmation",
+      label: t("finalConfirmation"),
+      complete: legalComplete,
+    },
     { key: "avatar", label: t("finalAvatar"), complete: avatarComplete },
-    { key: "documents", label: t("finalDocuments"), complete: documentsComplete },
+    {
+      key: "documents",
+      label: t("finalDocuments"),
+      complete: documentsComplete,
+    },
   ];
   const finalChecklistComplete = finalChecklist.every((item) => item.complete);
   const firstIncompleteStep = !contactComplete
@@ -502,16 +576,16 @@ export default function ProviderOnboardingFormWizard({
             : MAX_STEP;
   const checkProviderEmailStatus = useCallback(
     async (email: string) => {
-      const response = await axios.get<{ exists?: boolean; source?: "provider" | "auth" }>(
-        "/api/providers/onboarding/email-status",
-        {
-          params: { email },
-          headers: { "x-next-intl-locale": locale },
-        }
-      );
+      const response = await axios.get<{
+        exists?: boolean;
+        source?: "provider" | "auth";
+      }>("/api/providers/onboarding/email-status", {
+        params: { email },
+        headers: { "x-next-intl-locale": locale },
+      });
       return response.data;
     },
-    [locale]
+    [locale],
   );
 
   useEffect(() => {
@@ -558,7 +632,10 @@ export default function ProviderOnboardingFormWizard({
   useEffect(() => {
     if (!cityDropdownOpen) return;
     function handlePointerDown(event: MouseEvent) {
-      if (cityComboRef.current && !cityComboRef.current.contains(event.target as Node)) {
+      if (
+        cityComboRef.current &&
+        !cityComboRef.current.contains(event.target as Node)
+      ) {
         setCityDropdownOpen(false);
       }
     }
@@ -602,12 +679,17 @@ export default function ProviderOnboardingFormWizard({
       cancelled = true;
       window.clearTimeout(timerId);
     };
-  }, [checkProviderEmailStatus, hasValidEmailForNewsletter, normalizedEmail, providerUid]);
+  }, [
+    checkProviderEmailStatus,
+    hasValidEmailForNewsletter,
+    normalizedEmail,
+    providerUid,
+  ]);
 
   function updateFileSlot(
     file: File | null,
     setter: React.Dispatch<React.SetStateAction<FileSlot>>,
-    previewUrlRef: React.MutableRefObject<string | null>
+    previewUrlRef: React.MutableRefObject<string | null>,
   ) {
     revokeTrackedPreviewUrl(previewUrlRef);
 
@@ -672,7 +754,11 @@ export default function ProviderOnboardingFormWizard({
 
   async function confirmAvatarCrop() {
     if (!avatarSource?.previewUrl || !avatarCroppedAreaPixels) {
-      setAvatar((previous) => ({ ...previous, status: "error", error: t("avatarCropRequired") }));
+      setAvatar((previous) => ({
+        ...previous,
+        status: "error",
+        error: t("avatarCropRequired"),
+      }));
       return;
     }
 
@@ -686,7 +772,7 @@ export default function ProviderOnboardingFormWizard({
       const file = await createSquareAvatarFile(
         avatarSource.previewUrl,
         avatarCroppedAreaPixels,
-        "provider-avatar.jpg"
+        "provider-avatar.jpg",
       );
       setAvatar({
         file,
@@ -712,7 +798,9 @@ export default function ProviderOnboardingFormWizard({
     }
   }
 
-  async function createProviderAccount({ showToast = true } = {}) {
+  async function createProviderAccount({
+    showToast = true,
+  } = {}): Promise<AccountCreationResult | null> {
     const values = getValues();
     const { confirmPassword, ...formPayload } = values;
     const selectedCity = findRomaniaCity(values.countyCode, values.cityCode);
@@ -720,13 +808,15 @@ export default function ProviderOnboardingFormWizard({
     if (!selectedCity) {
       onStepChange(2);
       toast.error(t("cityRequired"));
-      return false;
+      return null;
     }
 
     setAccountCreating(true);
     logOnboardingClient("account create request started", {
       locale,
-      emailDomain: values.email.includes("@") ? values.email.split("@").pop()?.toLowerCase() : null,
+      emailDomain: values.email.includes("@")
+        ? values.email.split("@").pop()?.toLowerCase()
+        : null,
       countyCode: values.countyCode,
       cityCode: values.cityCode,
       serviceType: values.serviceType,
@@ -744,16 +834,18 @@ export default function ProviderOnboardingFormWizard({
         },
         {
           headers: { "x-next-intl-locale": locale },
-        }
+        },
       );
 
       const uid = typeof res.data?.uid === "string" ? res.data.uid : null;
       const credentials = await signInWithEmailAndPassword(
         getFirebaseAuth(),
         values.email.trim(),
-        values.password
+        values.password,
       );
-      const authenticatedUser = await waitForProviderAuthUser(uid || credentials.user.uid);
+      const authenticatedUser = await waitForProviderAuthUser(
+        uid || credentials.user.uid,
+      );
       setProviderUid(authenticatedUser.uid);
       logOnboardingClient("account create request completed", {
         uid: authenticatedUser.uid,
@@ -766,7 +858,10 @@ export default function ProviderOnboardingFormWizard({
           toast(t("welcomeEmailNotSent"), { duration: 6000 });
         }
       }
-      return true;
+      return {
+        created: res.data?.status === "created",
+        uid: authenticatedUser.uid,
+      };
     } catch (error: unknown) {
       const code = readAxiosErrorCode(error);
       if (code === "PROVIDER_EMAIL_EXISTS" || code === "AUTH_EMAIL_EXISTS") {
@@ -774,26 +869,34 @@ export default function ProviderOnboardingFormWizard({
           const credentials = await signInWithEmailAndPassword(
             getFirebaseAuth(),
             values.email.trim(),
-            values.password
+            values.password,
           );
-          const authenticatedUser = await waitForProviderAuthUser(credentials.user.uid);
+          const authenticatedUser = await waitForProviderAuthUser(
+            credentials.user.uid,
+          );
           setProviderUid(authenticatedUser.uid);
           logOnboardingClient("existing provider session recovered", {
             uid: authenticatedUser.uid,
             code,
           });
-          return true;
+          return { created: false, uid: authenticatedUser.uid };
         } catch (signInError) {
-          logOnboardingClientError("existing provider session recovery failed", signInError, {
-            code,
-            emailDomain: values.email.includes("@")
-              ? values.email.split("@").pop()?.toLowerCase()
-              : null,
-          });
+          logOnboardingClientError(
+            "existing provider session recovery failed",
+            signInError,
+            {
+              code,
+              emailDomain: values.email.includes("@")
+                ? values.email.split("@").pop()?.toLowerCase()
+                : null,
+            },
+          );
         }
       }
       logOnboardingClientError("account create request failed", error, {
-        status: (error as { response?: { status?: number } }).response?.status || null,
+        status:
+          (error as { response?: { status?: number } }).response?.status ||
+          null,
         code,
       });
       const ax = error as {
@@ -805,7 +908,7 @@ export default function ProviderOnboardingFormWizard({
           ? data.error
           : readCallableError(error, t("toastGenericError"));
       toast.error(message);
-      return false;
+      return null;
     } finally {
       setAccountCreating(false);
     }
@@ -814,13 +917,18 @@ export default function ProviderOnboardingFormWizard({
   const triggerWelcomeEmailSend = useCallback(async () => {
     const currentUser = getFirebaseAuth().currentUser;
     if (!currentUser) {
-      logOnboardingClient("welcome email trigger skipped: missing authenticated provider user");
+      logOnboardingClient(
+        "welcome email trigger skipped: missing authenticated provider user",
+      );
       return false;
     }
 
     try {
       const idToken = await currentUser.getIdToken();
-      const response = await axios.post<{ sent?: boolean; alreadySent?: boolean }>(
+      const response = await axios.post<{
+        sent?: boolean;
+        alreadySent?: boolean;
+      }>(
         "/api/providers/onboarding/welcome-email",
         {},
         {
@@ -851,11 +959,15 @@ export default function ProviderOnboardingFormWizard({
     slot: FileSlot,
     setter: React.Dispatch<React.SetStateAction<FileSlot>>,
     storagePath: string,
-    finalize: () => Promise<string | void>
+    finalize: () => Promise<string | void>,
   ) {
     if (slot.status === "uploaded" && slot.storagePath) return slot.storagePath;
     if (!slot.file) {
-      setter((previous) => ({ ...previous, status: "error", error: t("uploadRequired") }));
+      setter((previous) => ({
+        ...previous,
+        status: "error",
+        error: t("uploadRequired"),
+      }));
       logOnboardingClient("upload missing file", { label, storagePath });
       return null;
     }
@@ -888,7 +1000,10 @@ export default function ProviderOnboardingFormWizard({
       }));
       return finalizedPath || storagePath;
     } catch (error) {
-      logOnboardingClientError("upload/finalize failed", error, { label, storagePath });
+      logOnboardingClientError("upload/finalize failed", error, {
+        label,
+        storagePath,
+      });
       setter((previous) => ({
         ...previous,
         status: "error",
@@ -901,7 +1016,11 @@ export default function ProviderOnboardingFormWizard({
   async function ensureAvatarUploaded() {
     const uid = providerUid || getFirebaseAuth().currentUser?.uid;
     if (!uid || !avatar.file) {
-      setAvatar((previous) => ({ ...previous, status: "error", error: t("uploadRequired") }));
+      setAvatar((previous) => ({
+        ...previous,
+        status: "error",
+        error: t("uploadRequired"),
+      }));
       logOnboardingClient("avatar upload blocked", {
         hasUid: Boolean(uid),
         hasFile: Boolean(avatar.file),
@@ -922,11 +1041,15 @@ export default function ProviderOnboardingFormWizard({
   async function ensureDocumentUploaded(
     documentType: "identity" | "professional",
     slot: FileSlot,
-    setter: React.Dispatch<React.SetStateAction<FileSlot>>
+    setter: React.Dispatch<React.SetStateAction<FileSlot>>,
   ) {
     const uid = providerUid || getFirebaseAuth().currentUser?.uid;
     if (!uid || !slot.file) {
-      setter((previous) => ({ ...previous, status: "error", error: t("uploadRequired") }));
+      setter((previous) => ({
+        ...previous,
+        status: "error",
+        error: t("uploadRequired"),
+      }));
       logOnboardingClient("document upload blocked", {
         documentType,
         hasUid: Boolean(uid),
@@ -938,7 +1061,10 @@ export default function ProviderOnboardingFormWizard({
       slot.storagePath ||
       `providers/${uid}/documents/${documentType}/${sanitizeFileName(slot.file)}`;
     return uploadSlot(documentType, slot, setter, storagePath, async () => {
-      const callable = httpsCallable(getFirebaseFunctions(), "finalizeProviderDocumentUpload");
+      const callable = httpsCallable(
+        getFirebaseFunctions(),
+        "finalizeProviderDocumentUpload",
+      );
       await callable({
         documentType,
         storagePath,
@@ -992,9 +1118,13 @@ export default function ProviderOnboardingFormWizard({
           return;
         }
       } catch (error) {
-        logOnboardingClientError("email status check failed on step advance", error, {
-          emailDomain: normalizedEmail.split("@").pop() || null,
-        });
+        logOnboardingClientError(
+          "email status check failed on step advance",
+          error,
+          {
+            emailDomain: normalizedEmail.split("@").pop() || null,
+          },
+        );
         setEmailStatus("error");
         setEmailStatusCheckedValue(normalizedEmail);
         toast.error(t("emailCheckFailed"));
@@ -1002,9 +1132,32 @@ export default function ProviderOnboardingFormWizard({
       }
     }
 
+    if (currentStep === 3 && !providerUid) {
+      const account = await createProviderAccount({ showToast: false });
+      if (!account) return;
+
+      if (account.created) {
+        trackMetaStandardEvent("Lead", `provider-lead:${account.uid}`, {
+          content_name: "Provider pre-registration",
+          locale,
+          service_type: selectedServiceType,
+        });
+      }
+
+      const welcomeEmailSent = await triggerWelcomeEmailSend();
+      toast.success(t("phaseOneCreated"));
+      if (!welcomeEmailSent) {
+        toast(t("welcomeEmailNotSent"), { duration: 6000 });
+      }
+    }
+
     if (currentStep === 4) {
       if (!avatar.file && avatar.status !== "uploaded") {
-        setAvatar((previous) => ({ ...previous, status: "error", error: t("avatarRequired") }));
+        setAvatar((previous) => ({
+          ...previous,
+          status: "error",
+          error: t("avatarRequired"),
+        }));
         logOnboardingClient("avatar local validation failed", {
           hasFile: Boolean(avatar.file),
           status: avatar.status,
@@ -1033,7 +1186,10 @@ export default function ProviderOnboardingFormWizard({
           error: t("uploadRequired"),
         }));
       }
-      if (!professionalDocument.file && professionalDocument.status !== "uploaded") {
+      if (
+        !professionalDocument.file &&
+        professionalDocument.status !== "uploaded"
+      ) {
         documentsReady = false;
         setProfessionalDocument((previous) => ({
           ...previous,
@@ -1041,7 +1197,10 @@ export default function ProviderOnboardingFormWizard({
           error: t("uploadRequired"),
         }));
       }
-      if (identityDocument.status === "error" || professionalDocument.status === "error") {
+      if (
+        identityDocument.status === "error" ||
+        professionalDocument.status === "error"
+      ) {
         documentsReady = false;
       }
       logOnboardingClient(
@@ -1053,19 +1212,34 @@ export default function ProviderOnboardingFormWizard({
           identityHasFile: Boolean(identityDocument.file),
           professionalStatus: professionalDocument.status,
           professionalHasFile: Boolean(professionalDocument.file),
-        }
+        },
       );
       if (!documentsReady) return;
     }
 
     const nextStep = Math.min(MAX_STEP, currentStep + 1);
-    logOnboardingClient("step advanced", { fromStep: currentStep, toStep: nextStep });
+    trackMetaCustomEvent(
+      "ProviderOnboardingStepCompleted",
+      `provider-onboarding-step:${normalizedEmail || "anonymous"}:${currentStep}`,
+      {
+        from_step: currentStep,
+        locale,
+        to_step: nextStep,
+      },
+    );
+    logOnboardingClient("step advanced", {
+      fromStep: currentStep,
+      toStep: nextStep,
+    });
     onStepChange(nextStep);
   }
 
   function goBackStep() {
     const previousStep = Math.max(1, currentStep - 1);
-    logOnboardingClient("back step requested", { fromStep: currentStep, toStep: previousStep });
+    logOnboardingClient("back step requested", {
+      fromStep: currentStep,
+      toStep: previousStep,
+    });
     onStepChange(previousStep);
   }
 
@@ -1073,7 +1247,9 @@ export default function ProviderOnboardingFormWizard({
     setFinalSubmitting(true);
     setFinalError(null);
     logOnboardingClient("final submit started", {
-      hasProviderUid: Boolean(providerUid || getFirebaseAuth().currentUser?.uid),
+      hasProviderUid: Boolean(
+        providerUid || getFirebaseAuth().currentUser?.uid,
+      ),
       avatarStatus: avatar.status,
       identityDocumentStatus: identityDocument.status,
       professionalDocumentStatus: professionalDocument.status,
@@ -1101,11 +1277,11 @@ export default function ProviderOnboardingFormWizard({
         throw new Error(t("toastGenericError"));
       }
       if (!providerUid && !getFirebaseAuth().currentUser?.uid) {
-        const created = await createProviderAccount({ showToast: false });
-        if (!created) return;
+        const account = await createProviderAccount({ showToast: false });
+        if (!account) return;
       }
       const activeProviderUser = await waitForProviderAuthUser(
-        providerUid || getFirebaseAuth().currentUser?.uid || null
+        providerUid || getFirebaseAuth().currentUser?.uid || null,
       );
       setProviderUid(activeProviderUser.uid);
       if (!isSlotReadyForSubmit(avatar)) throw new Error(t("avatarRequired"));
@@ -1131,12 +1307,12 @@ export default function ProviderOnboardingFormWizard({
       const identityDocumentPath = await ensureDocumentUploaded(
         "identity",
         identityDocument,
-        setIdentityDocument
+        setIdentityDocument,
       );
       const professionalDocumentPath = await ensureDocumentUploaded(
         "professional",
         professionalDocument,
-        setProfessionalDocument
+        setProfessionalDocument,
       );
       if (!identityDocumentPath || !professionalDocumentPath) {
         setFinalError(t("uploadFailed"));
@@ -1152,18 +1328,34 @@ export default function ProviderOnboardingFormWizard({
         hasProfessionalDocumentPath: Boolean(professionalDocumentPath),
       };
 
-      logOnboardingClient("pre-registration uploads finalized", submitPayloadSummary);
-      const welcomeEmailSent = await triggerWelcomeEmailSend();
-      if (!welcomeEmailSent) {
-        toast(t("welcomeEmailNotSent"), { duration: 6000 });
+      logOnboardingClient(
+        "pre-registration uploads finalized",
+        submitPayloadSummary,
+      );
+      if (uid) {
+        trackMetaStandardEvent(
+          "CompleteRegistration",
+          `provider-registration-complete:${uid}`,
+          {
+            content_name: "Provider verification submitted",
+            locale,
+            status: "pending_review",
+          },
+        );
       }
       try {
         await signOut(getFirebaseAuth());
-        logOnboardingClient("temporary provider web session signed out", { uid });
-      } catch (signOutError) {
-        logOnboardingClientError("temporary provider web session sign out failed", signOutError, {
+        logOnboardingClient("temporary provider web session signed out", {
           uid,
         });
+      } catch (signOutError) {
+        logOnboardingClientError(
+          "temporary provider web session sign out failed",
+          signOutError,
+          {
+            uid,
+          },
+        );
       }
       logOnboardingClient("final submit completed");
       toast.success(t("toastSuccess"));
@@ -1183,10 +1375,10 @@ export default function ProviderOnboardingFormWizard({
     description: string,
     slot: FileSlot,
     setter: React.Dispatch<React.SetStateAction<FileSlot>>,
-    previewUrlRef: React.MutableRefObject<string | null>
+    previewUrlRef: React.MutableRefObject<string | null>,
   ) {
     return (
-      <div className="rounded-xl border border-border p-4">
+      <div className="border-border rounded-xl border p-4">
         <div className="mb-3 flex items-start gap-3">
           <span className="bg-primary/10 text-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
             {slot.status === "uploaded" ? (
@@ -1197,7 +1389,7 @@ export default function ProviderOnboardingFormWizard({
           </span>
           <div>
             <p className="font-medium text-black dark:text-white">{title}</p>
-            <p className="text-sm text-muted-foreground">{description}</p>
+            <p className="text-muted-foreground text-sm">{description}</p>
           </div>
         </div>
 
@@ -1206,12 +1398,16 @@ export default function ProviderOnboardingFormWizard({
           accept="image/*"
           disabled={busy}
           onChange={(event) =>
-            updateFileSlot(event.target.files?.[0] || null, setter, previewUrlRef)
+            updateFileSlot(
+              event.target.files?.[0] || null,
+              setter,
+              previewUrlRef,
+            )
           }
-          className="block w-full text-sm file:mr-4 file:rounded-md file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-medium file:text-white"
+          className="file:bg-primary block w-full text-sm file:mr-4 file:rounded-md file:border-0 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white"
         />
 
-        <p className="mt-2 text-xs text-muted-foreground">
+        <p className="text-muted-foreground mt-2 text-xs">
           {slot.status === "uploaded"
             ? t("uploadStatusUploaded")
             : slot.status === "uploading"
@@ -1237,7 +1433,9 @@ export default function ProviderOnboardingFormWizard({
             </button>
           </div>
         ) : null}
-        {slot.error && <p className="mt-2 text-xs text-red-500">{slot.error}</p>}
+        {slot.error && (
+          <p className="mt-2 text-xs text-red-500">{slot.error}</p>
+        )}
       </div>
     );
   }
@@ -1245,7 +1443,7 @@ export default function ProviderOnboardingFormWizard({
   function renderAvatarPicker() {
     return (
       <div className="space-y-4">
-        <div className="rounded-xl border border-border p-4">
+        <div className="border-border rounded-xl border p-4">
           <div className="mb-3 flex items-start gap-3">
             <span className="bg-primary/10 text-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
               {avatar.status === "uploaded" ? (
@@ -1255,8 +1453,12 @@ export default function ProviderOnboardingFormWizard({
               )}
             </span>
             <div>
-              <p className="font-medium text-black dark:text-white">{t("avatarTitle")}</p>
-              <p className="text-sm text-muted-foreground">{t("avatarDescription")}</p>
+              <p className="font-medium text-black dark:text-white">
+                {t("avatarTitle")}
+              </p>
+              <p className="text-muted-foreground text-sm">
+                {t("avatarDescription")}
+              </p>
             </div>
           </div>
 
@@ -1268,7 +1470,7 @@ export default function ProviderOnboardingFormWizard({
               updateAvatarSource(event.target.files?.[0] || null);
               event.currentTarget.value = "";
             }}
-            className="block w-full text-sm file:mr-4 file:rounded-md file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-medium file:text-white"
+            className="file:bg-primary block w-full text-sm file:mr-4 file:rounded-md file:border-0 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white"
           />
           {avatarSource?.error && (
             <p className="mt-2 text-xs text-red-500">{avatarSource.error}</p>
@@ -1276,10 +1478,14 @@ export default function ProviderOnboardingFormWizard({
         </div>
 
         {avatarSource?.previewUrl ? (
-          <div className="rounded-xl border border-border p-4">
+          <div className="border-border rounded-xl border p-4">
             <div className="mb-3">
-              <p className="font-medium text-black dark:text-white">{t("avatarCropTitle")}</p>
-              <p className="text-sm text-muted-foreground">{t("avatarCropDescription")}</p>
+              <p className="font-medium text-black dark:text-white">
+                {t("avatarCropTitle")}
+              </p>
+              <p className="text-muted-foreground text-sm">
+                {t("avatarCropDescription")}
+              </p>
             </div>
             <div className="relative h-72 overflow-hidden rounded-lg bg-black sm:h-80">
               <Cropper
@@ -1296,7 +1502,10 @@ export default function ProviderOnboardingFormWizard({
                 }
               />
             </div>
-            <label htmlFor="avatar-zoom" className="mt-4 block text-sm font-medium">
+            <label
+              htmlFor="avatar-zoom"
+              className="mt-4 block text-sm font-medium"
+            >
               {t("avatarCropZoom")}
             </label>
             <input
@@ -1308,7 +1517,7 @@ export default function ProviderOnboardingFormWizard({
               value={avatarZoom}
               disabled={busy || avatarCropping}
               onChange={(event) => setAvatarZoom(Number(event.target.value))}
-              className="mt-2 w-full accent-primary"
+              className="accent-primary mt-2 w-full"
             />
             <button
               type="button"
@@ -1322,12 +1531,12 @@ export default function ProviderOnboardingFormWizard({
         ) : null}
 
         {avatar.previewUrl ? (
-          <div className="rounded-xl border border-border p-4">
+          <div className="border-border rounded-xl border p-4">
             <p className="mb-3 text-sm font-medium text-black dark:text-white">
               {t("avatarCropReady")}
             </p>
             <div>
-              <p className="mb-2 text-xs text-muted-foreground">
+              <p className="text-muted-foreground mb-2 text-xs">
                 {t("avatarCropPreviewCircle")}
               </p>
               <Image
@@ -1339,7 +1548,7 @@ export default function ProviderOnboardingFormWizard({
                 className="size-44 rounded-2xl object-cover"
               />
             </div>
-            <p className="mt-3 text-xs text-muted-foreground">
+            <p className="text-muted-foreground mt-3 text-xs">
               {avatar.status === "uploaded"
                 ? t("uploadStatusUploaded")
                 : avatar.status === "uploading"
@@ -1348,7 +1557,9 @@ export default function ProviderOnboardingFormWizard({
                     ? t("uploadStatusReady")
                     : t("uploadStatusEmpty")}
             </p>
-            {avatar.error && <p className="mt-2 text-xs text-red-500">{avatar.error}</p>}
+            {avatar.error && (
+              <p className="mt-2 text-xs text-red-500">{avatar.error}</p>
+            )}
           </div>
         ) : avatar.error ? (
           <p className="text-xs text-red-500">{avatar.error}</p>
@@ -1380,23 +1591,27 @@ export default function ProviderOnboardingFormWizard({
               })}
               errorMessages={
                 errors.email?.message ||
-                (emailStatus === "exists" && emailStatusCheckedValue === normalizedEmail
+                (emailStatus === "exists" &&
+                emailStatusCheckedValue === normalizedEmail
                   ? apiErrors("PROVIDER_EMAIL_EXISTS")
                   : undefined)
               }
             />
             {hasValidEmailForNewsletter && emailStatus === "checking" && (
-              <p className="-mt-2 text-xs text-muted-foreground md:col-start-2">
+              <p className="text-muted-foreground -mt-2 text-xs md:col-start-2">
                 {t("emailChecking")}
               </p>
             )}
             {hasValidEmailForNewsletter && emailStatus === "error" && (
-              <p className="-mt-2 text-xs text-muted-foreground md:col-start-2">
+              <p className="text-muted-foreground -mt-2 text-xs md:col-start-2">
                 {t("emailCheckFailed")}
               </p>
             )}
             <fieldset>
-              <label htmlFor="provider-password" className="mb-2.5 inline-block text-sm">
+              <label
+                htmlFor="provider-password"
+                className="mb-2.5 inline-block text-sm"
+              >
                 {t("passwordLabel")}
               </label>
               <div className="relative">
@@ -1415,17 +1630,28 @@ export default function ProviderOnboardingFormWizard({
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
                   className="text-muted-foreground hover:text-foreground absolute inset-y-0 right-3 flex items-center"
-                  aria-label={showPassword ? t("hidePassword") : t("showPassword")}
+                  aria-label={
+                    showPassword ? t("hidePassword") : t("showPassword")
+                  }
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
                 </button>
               </div>
               {errors.password?.message && (
-                <p className="mt-2 text-xs text-red-500">{errors.password.message}</p>
+                <p className="mt-2 text-xs text-red-500">
+                  {errors.password.message}
+                </p>
               )}
             </fieldset>
             <fieldset>
-              <label htmlFor="provider-confirm-password" className="mb-2.5 inline-block text-sm">
+              <label
+                htmlFor="provider-confirm-password"
+                className="mb-2.5 inline-block text-sm"
+              >
                 {t("confirmPasswordLabel")}
               </label>
               <div className="relative">
@@ -1446,10 +1672,16 @@ export default function ProviderOnboardingFormWizard({
                   onClick={() => setShowConfirmPassword((prev) => !prev)}
                   className="text-muted-foreground hover:text-foreground absolute inset-y-0 right-3 flex items-center"
                   aria-label={
-                    showConfirmPassword ? t("hideConfirmPassword") : t("showConfirmPassword")
+                    showConfirmPassword
+                      ? t("hideConfirmPassword")
+                      : t("showConfirmPassword")
                   }
                 >
-                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showConfirmPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
                 </button>
               </div>
               {errors.confirmPassword?.message && (
@@ -1459,10 +1691,15 @@ export default function ProviderOnboardingFormWizard({
               )}
             </fieldset>
             <div className="md:col-span-2">
-              <label htmlFor="provider-phone-input" className="mb-2 inline-block text-sm font-medium">
+              <label
+                htmlFor="provider-phone-input"
+                className="mb-2 inline-block text-sm font-medium"
+              >
                 {t("phoneLabel")}
               </label>
-              <p className="mb-2.5 text-xs text-muted-foreground">{t("phoneHint")}</p>
+              <p className="text-muted-foreground mb-2.5 text-xs">
+                {t("phoneHint")}
+              </p>
               <Controller
                 control={control}
                 name="phone"
@@ -1486,8 +1723,10 @@ export default function ProviderOnboardingFormWizard({
                     onChange={(v) => field.onChange(v ?? "")}
                     smartCaret={false}
                     className={cn(
-                      "flex w-full items-center gap-2 rounded-md border border-stroke bg-white px-3 py-1 dark:border-stroke-dark dark:bg-black",
-                      errors.phone ? "border-red-500 dark:border-red-500" : null,
+                      "border-stroke dark:border-stroke-dark flex w-full items-center gap-2 rounded-md border bg-white px-3 py-1 dark:bg-black",
+                      errors.phone
+                        ? "border-red-500 dark:border-red-500"
+                        : null,
                     )}
                     numberInputProps={{
                       id: "provider-phone-input",
@@ -1500,18 +1739,23 @@ export default function ProviderOnboardingFormWizard({
                 )}
               />
               {errors.phone?.message && (
-                <p className="mt-2 text-xs text-red-500">{errors.phone.message}</p>
+                <p className="mt-2 text-xs text-red-500">
+                  {errors.phone.message}
+                </p>
               )}
             </div>
           </div>
-          <p className="text-xs text-muted-foreground">{t("step1Footnote")}</p>
+          <p className="text-muted-foreground text-xs">{t("step1Footnote")}</p>
         </>
       )}
 
       {currentStep === 2 && (
         <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
           <fieldset>
-            <label htmlFor="provider-county" className="mb-2.5 inline-block text-sm">
+            <label
+              htmlFor="provider-county"
+              className="mb-2.5 inline-block text-sm"
+            >
               {t("countyLabel")}
             </label>
             <select
@@ -1529,11 +1773,16 @@ export default function ProviderOnboardingFormWizard({
               ))}
             </select>
             {errors.countyCode?.message && (
-              <p className="mt-2 text-xs text-red-500">{errors.countyCode.message}</p>
+              <p className="mt-2 text-xs text-red-500">
+                {errors.countyCode.message}
+              </p>
             )}
           </fieldset>
           <fieldset>
-            <label htmlFor="provider-city" className="mb-2.5 inline-block text-sm">
+            <label
+              htmlFor="provider-city"
+              className="mb-2.5 inline-block text-sm"
+            >
               {t("cityLabel")}
             </label>
             <div ref={cityComboRef} className="relative">
@@ -1542,7 +1791,8 @@ export default function ProviderOnboardingFormWizard({
                 {...register("cityCode", {
                   required: t("cityRequired"),
                   validate: (value) =>
-                    Boolean(findRomaniaCity(selectedCountyCode, value)) || t("cityRequired"),
+                    Boolean(findRomaniaCity(selectedCountyCode, value)) ||
+                    t("cityRequired"),
                 })}
               />
               <button
@@ -1559,10 +1809,16 @@ export default function ProviderOnboardingFormWizard({
                 }}
                 className={cn(
                   "border-stroke text-body focus:border-primary focus:shadow-input dark:border-stroke-dark dark:focus:border-primary flex w-full items-center justify-between gap-2 rounded-md border bg-white px-6 py-3 text-left text-base font-medium outline-hidden disabled:cursor-not-allowed disabled:opacity-60 dark:bg-black dark:text-white",
-                  errors.cityCode && "border-red-500"
+                  errors.cityCode && "border-red-500",
                 )}
               >
-                <span className={selectedCityRecord ? "text-body truncate" : "text-muted-foreground truncate"}>
+                <span
+                  className={
+                    selectedCityRecord
+                      ? "text-body truncate"
+                      : "text-muted-foreground truncate"
+                  }
+                >
                   {!selectedCountyCode
                     ? t("cityDisabledPlaceholder")
                     : selectedCityRecord
@@ -1572,7 +1828,7 @@ export default function ProviderOnboardingFormWizard({
                 <ChevronDown
                   className={cn(
                     "text-muted-foreground h-4 w-4 shrink-0 transition-transform",
-                    cityDropdownOpen && "rotate-180"
+                    cityDropdownOpen && "rotate-180",
                   )}
                   aria-hidden
                 />
@@ -1580,7 +1836,7 @@ export default function ProviderOnboardingFormWizard({
 
               {cityDropdownOpen && selectedCountyCode ? (
                 <div
-                  className="border-stroke dark:border-stroke-dark absolute left-0 right-0 z-[100] mt-1 overflow-hidden rounded-md border bg-white shadow-lg dark:bg-black"
+                  className="border-stroke dark:border-stroke-dark absolute right-0 left-0 z-[100] mt-1 overflow-hidden rounded-md border bg-white shadow-lg dark:bg-black"
                   role="presentation"
                 >
                   <input
@@ -1603,9 +1859,11 @@ export default function ProviderOnboardingFormWizard({
                           type="button"
                           role="option"
                           aria-selected={selectedCityCode === city.cityCode}
-                          className="hover:bg-muted/80 dark:hover:bg-muted/20 w-full px-4 py-2.5 text-left text-sm text-body dark:text-white"
+                          className="hover:bg-muted/80 dark:hover:bg-muted/20 text-body w-full px-4 py-2.5 text-left text-sm dark:text-white"
                           onClick={() => {
-                            setValue("cityCode", city.cityCode, { shouldValidate: true });
+                            setValue("cityCode", city.cityCode, {
+                              shouldValidate: true,
+                            });
                             setCitySearch("");
                             setCityDropdownOpen(false);
                           }}
@@ -1624,11 +1882,16 @@ export default function ProviderOnboardingFormWizard({
               ) : null}
             </div>
             {errors.cityCode?.message && (
-              <p className="mt-2 text-xs text-red-500">{errors.cityCode.message}</p>
+              <p className="mt-2 text-xs text-red-500">
+                {errors.cityCode.message}
+              </p>
             )}
           </fieldset>
           <fieldset>
-            <label htmlFor="provider-service" className="mb-2.5 inline-block text-sm">
+            <label
+              htmlFor="provider-service"
+              className="mb-2.5 inline-block text-sm"
+            >
               {t("serviceLabel")}
             </label>
             <select
@@ -1645,7 +1908,9 @@ export default function ProviderOnboardingFormWizard({
               ))}
             </select>
             {errors.serviceType?.message && (
-              <p className="mt-2 text-xs text-red-500">{errors.serviceType.message}</p>
+              <p className="mt-2 text-xs text-red-500">
+                {errors.serviceType.message}
+              </p>
             )}
           </fieldset>
         </div>
@@ -1654,7 +1919,10 @@ export default function ProviderOnboardingFormWizard({
       {currentStep === 3 && (
         <>
           <fieldset>
-            <label htmlFor="provider-legal-status" className="mb-2.5 inline-block text-sm">
+            <label
+              htmlFor="provider-legal-status"
+              className="mb-2.5 inline-block text-sm"
+            >
               {t("legalStatusLabel")}
             </label>
             <select
@@ -1662,7 +1930,9 @@ export default function ProviderOnboardingFormWizard({
               aria-label={t("legalStatusAria")}
               disabled={Boolean(providerUid)}
               className="border-stroke text-body focus:border-primary focus:shadow-input dark:border-stroke-dark dark:focus:border-primary w-full rounded-md border bg-white px-6 py-3 text-base font-medium outline-hidden disabled:opacity-60 dark:bg-black dark:text-white"
-              {...register("legalStatus", { required: t("legalStatusRequired") })}
+              {...register("legalStatus", {
+                required: t("legalStatusRequired"),
+              })}
             >
               {legalStatusOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -1671,26 +1941,34 @@ export default function ProviderOnboardingFormWizard({
               ))}
             </select>
             {errors.legalStatus?.message && (
-              <p className="mt-2 text-xs text-red-500">{errors.legalStatus.message}</p>
+              <p className="mt-2 text-xs text-red-500">
+                {errors.legalStatus.message}
+              </p>
             )}
             <div className="mt-3">
               <button
                 type="button"
                 onClick={() => setLegalGuideOpen((current) => !current)}
-                className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+                className="text-primary inline-flex items-center gap-2 text-sm font-medium hover:underline"
                 aria-expanded={legalGuideOpen}
               >
                 <Info className="h-4 w-4 shrink-0" aria-hidden="true" />
-                {legalGuideOpen ? t("legalGuideToggleHide") : t("legalGuideToggleShow")}
+                {legalGuideOpen
+                  ? t("legalGuideToggleHide")
+                  : t("legalGuideToggleShow")}
               </button>
 
               {legalGuideOpen ? (
-                <div className="mt-3 rounded-md border border-border bg-muted/30 p-3 sm:p-4">
-                  <p className="text-sm font-semibold text-foreground">{t("legalGuideTitle")}</p>
-                  <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                <div className="border-border bg-muted/30 mt-3 rounded-md border p-3 sm:p-4">
+                  <p className="text-foreground text-sm font-semibold">
+                    {t("legalGuideTitle")}
+                  </p>
+                  <p className="text-muted-foreground mt-2 text-xs leading-5">
                     {t("legalGuideDisclaimer")}
                   </p>
-                  <p className="mt-3 text-sm text-foreground">{t("legalGuideFormsIntro")}</p>
+                  <p className="text-foreground mt-3 text-sm">
+                    {t("legalGuideFormsIntro")}
+                  </p>
                   <ul className="mt-3 space-y-2">
                     {ONRC_LEGAL_GUIDE_LINKS.map((item) => (
                       <li key={item.key}>
@@ -1698,27 +1976,29 @@ export default function ProviderOnboardingFormWizard({
                           href={item.href}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-start justify-between gap-3 rounded-md border border-border bg-background px-3 py-2.5 text-sm transition-colors hover:border-primary/40"
+                          className="border-border bg-background hover:border-primary/40 flex items-start justify-between gap-3 rounded-md border px-3 py-2.5 text-sm transition-colors"
                         >
                           <span>
-                            <span className="block font-medium text-foreground">
+                            <span className="text-foreground block font-medium">
                               {t(item.labelKey)}
                             </span>
-                            <span className="mt-0.5 block text-xs text-primary">
+                            <span className="text-primary mt-0.5 block text-xs">
                               {t("legalGuideOpenOfficial")}
                             </span>
                           </span>
                           <ExternalLink
-                            className="mt-0.5 h-4 w-4 shrink-0 text-primary"
+                            className="text-primary mt-0.5 h-4 w-4 shrink-0"
                             aria-hidden="true"
                           />
                         </a>
                       </li>
                     ))}
                   </ul>
-                  <div className="mt-4 border-t border-border pt-3">
-                    <p className="text-sm font-medium text-foreground">{t("legalGuideCaenTitle")}</p>
-                    <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
+                  <div className="border-border mt-4 border-t pt-3">
+                    <p className="text-foreground text-sm font-medium">
+                      {t("legalGuideCaenTitle")}
+                    </p>
+                    <p className="text-muted-foreground mt-1.5 text-xs leading-5">
                       {t("legalGuideCaenBody")}
                     </p>
                   </div>
@@ -1736,7 +2016,9 @@ export default function ProviderOnboardingFormWizard({
                   disabled={Boolean(providerUid)}
                   {...register("companyName", {
                     validate: (value) =>
-                      !isLegalEntityReady || value.trim().length > 1 || t("companyRequired"),
+                      !isLegalEntityReady ||
+                      value.trim().length > 1 ||
+                      t("companyRequired"),
                   })}
                   errorMessages={errors.companyName?.message}
                 />
@@ -1747,7 +2029,9 @@ export default function ProviderOnboardingFormWizard({
                 disabled={Boolean(providerUid)}
                 {...register("cui", {
                   validate: (value) =>
-                    !isLegalEntityReady || value.trim().length > 1 || t("cuiRequired"),
+                    !isLegalEntityReady ||
+                    value.trim().length > 1 ||
+                    t("cuiRequired"),
                 })}
                 errorMessages={errors.cui?.message}
               />
@@ -1764,7 +2048,10 @@ export default function ProviderOnboardingFormWizard({
           {isEntityInProgress && (
             <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
               <fieldset>
-                <label htmlFor="setup-timeline" className="mb-2.5 inline-block text-sm">
+                <label
+                  htmlFor="setup-timeline"
+                  className="mb-2.5 inline-block text-sm"
+                >
                   {t("timelineLabel")}
                 </label>
                 <select
@@ -1774,7 +2061,9 @@ export default function ProviderOnboardingFormWizard({
                   className="border-stroke text-body focus:border-primary focus:shadow-input dark:border-stroke-dark dark:focus:border-primary w-full rounded-md border bg-white px-6 py-3 text-base font-medium outline-hidden disabled:opacity-60 dark:bg-black dark:text-white"
                   {...register("estimatedSetupTimeline", {
                     validate: (value) =>
-                      !isEntityInProgress || value.trim().length > 0 || t("timelineRequired"),
+                      !isEntityInProgress ||
+                      value.trim().length > 0 ||
+                      t("timelineRequired"),
                   })}
                 >
                   <option value="">{t("timelinePlaceholder")}</option>
@@ -1790,7 +2079,10 @@ export default function ProviderOnboardingFormWizard({
                 )}
               </fieldset>
               <fieldset>
-                <label htmlFor="has-accountant" className="mb-2.5 inline-block text-sm">
+                <label
+                  htmlFor="has-accountant"
+                  className="mb-2.5 inline-block text-sm"
+                >
                   {t("accountantLabel")}
                 </label>
                 <select
@@ -1809,7 +2101,7 @@ export default function ProviderOnboardingFormWizard({
           )}
 
           {hasValidEmailForNewsletter && !providerUid && (
-            <div className="rounded-md border border-border p-3 sm:p-4">
+            <div className="border-border rounded-md border p-3 sm:p-4">
               <p className="mb-2 text-sm font-medium">{t("newsletterTitle")}</p>
               <Controller
                 control={control}
@@ -1884,7 +2176,9 @@ export default function ProviderOnboardingFormWizard({
                   </p>
                 ) : null}
                 {fieldState.error && (
-                  <p className="mt-2 text-xs text-red-500">{fieldState.error.message}</p>
+                  <p className="mt-2 text-xs text-red-500">
+                    {fieldState.error.message}
+                  </p>
                 )}
               </div>
             )}
@@ -1899,9 +2193,26 @@ export default function ProviderOnboardingFormWizard({
 
       {currentStep === 4 && (
         <div className="space-y-4">
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 sm:p-5 dark:border-emerald-900/60 dark:bg-emerald-950/30">
+            <p className="font-semibold text-emerald-900 dark:text-emerald-100">
+              {t("phaseOneTitle")}
+            </p>
+            <p className="mt-1.5 text-sm leading-6 text-emerald-800 dark:text-emerald-200">
+              {t("phaseOneDescription")}
+            </p>
+            <AppStoreLinks
+              androidLabel={t("downloadAndroid")}
+              iosLabel={t("downloadIos")}
+              compact
+              className="mt-4"
+            />
+            <p className="mt-3 text-xs text-emerald-800 dark:text-emerald-200">
+              {t("continueOnWeb")}
+            </p>
+          </div>
           <div className="flex items-center gap-3">
             <ImagePlus className="text-primary h-5 w-5" />
-            <p className="text-sm text-muted-foreground">{t("avatarIntro")}</p>
+            <p className="text-muted-foreground text-sm">{t("avatarIntro")}</p>
           </div>
           {renderAvatarPicker()}
         </div>
@@ -1914,26 +2225,30 @@ export default function ProviderOnboardingFormWizard({
             t("identityDocumentDescription"),
             identityDocument,
             setIdentityDocument,
-            identityPreviewUrlRef
+            identityPreviewUrlRef,
           )}
           {renderFilePicker(
             t("professionalDocumentTitle"),
             t("professionalDocumentDescription"),
             professionalDocument,
             setProfessionalDocument,
-            professionalPreviewUrlRef
+            professionalPreviewUrlRef,
           )}
         </div>
       )}
 
       {currentStep === 6 && (
-        <div className="space-y-4 rounded-xl border border-border p-4">
-          <p className="text-sm text-muted-foreground">{t("finalReviewIntro")}</p>
+        <div className="border-border space-y-4 rounded-xl border p-4">
+          <p className="text-muted-foreground text-sm">
+            {t("finalReviewIntro")}
+          </p>
           <ul className="space-y-2 text-sm">
             {finalChecklist.map((item) => (
               <li
                 key={item.key}
-                className={item.complete ? "text-emerald-700" : "text-muted-foreground"}
+                className={
+                  item.complete ? "text-emerald-700" : "text-muted-foreground"
+                }
               >
                 <span className="font-medium">{item.complete ? "✓" : "•"}</span>{" "}
                 {item.label}
@@ -1944,7 +2259,7 @@ export default function ProviderOnboardingFormWizard({
         </div>
       )}
 
-      <div className="mt-6 flex items-center justify-between gap-3 border-t border-border pt-6">
+      <div className="border-border mt-6 flex items-center justify-between gap-3 border-t pt-6">
         <button
           type="button"
           onClick={goBackStep}
@@ -1961,7 +2276,11 @@ export default function ProviderOnboardingFormWizard({
             disabled={nextDisabled}
             className="bg-primary hover:bg-primary/90 rounded-md px-5 py-2 text-sm font-medium text-white disabled:opacity-60"
           >
-            {accountCreating ? t("submitting") : t("next")}
+            {accountCreating
+              ? t("submitting")
+              : currentStep === 3
+                ? t("createAccount")
+                : t("next")}
           </button>
         ) : (
           <button
@@ -1995,10 +2314,14 @@ export default function ProviderOnboardingFormWizard({
       >
         <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
-            <DialogTitle>{documentPreview.title || t("documentPreviewTitle")}</DialogTitle>
-            <DialogDescription>{t("documentPreviewDescription")}</DialogDescription>
+            <DialogTitle>
+              {documentPreview.title || t("documentPreviewTitle")}
+            </DialogTitle>
+            <DialogDescription>
+              {t("documentPreviewDescription")}
+            </DialogDescription>
           </DialogHeader>
-          <div className="flex min-h-[320px] items-center justify-center rounded-md border border-border bg-muted/30 p-3">
+          <div className="border-border bg-muted/30 flex min-h-[320px] items-center justify-center rounded-md border p-3">
             {documentPreview.previewUrl ? (
               <Image
                 src={documentPreview.previewUrl}
@@ -2009,7 +2332,9 @@ export default function ProviderOnboardingFormWizard({
                 className="max-h-[70vh] max-w-full rounded-sm object-contain"
               />
             ) : (
-              <p className="text-sm text-muted-foreground">{t("uploadRequired")}</p>
+              <p className="text-muted-foreground text-sm">
+                {t("uploadRequired")}
+              </p>
             )}
           </div>
           <DialogFooter>
