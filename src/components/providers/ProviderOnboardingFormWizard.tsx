@@ -1,9 +1,5 @@
 "use client";
 
-import {
-  trackMetaCustomEvent,
-  trackMetaStandardEvent,
-} from "@/components/analytics/MetaPixel";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -365,14 +361,6 @@ export default function ProviderOnboardingFormWizard({
   const avatarPreviewUrlRef = useRef<string | null>(null);
   const identityPreviewUrlRef = useRef<string | null>(null);
   const professionalPreviewUrlRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    trackMetaCustomEvent(
-      "ProviderOnboardingStarted",
-      `provider-onboarding-started:${locale}`,
-      { locale },
-    );
-  }, [locale]);
 
   const legalStatusOptions = useMemo(
     () => [
@@ -1135,14 +1123,6 @@ export default function ProviderOnboardingFormWizard({
       const account = await createProviderAccount({ showToast: false });
       if (!account) return;
 
-      if (account.created) {
-        trackMetaStandardEvent("Lead", `provider-lead:${account.uid}`, {
-          content_name: "Provider pre-registration",
-          locale,
-          service_type: selectedServiceType,
-        });
-      }
-
       const welcomeEmailSent = await triggerWelcomeEmailSend();
       toast.success(t("phaseOneCreated"));
       if (!welcomeEmailSent) {
@@ -1217,15 +1197,6 @@ export default function ProviderOnboardingFormWizard({
     }
 
     const nextStep = Math.min(MAX_STEP, currentStep + 1);
-    trackMetaCustomEvent(
-      "ProviderOnboardingStepCompleted",
-      `provider-onboarding-step:${normalizedEmail || "anonymous"}:${currentStep}`,
-      {
-        from_step: currentStep,
-        locale,
-        to_step: nextStep,
-      },
-    );
     logOnboardingClient("step advanced", {
       fromStep: currentStep,
       toStep: nextStep,
@@ -1331,17 +1302,6 @@ export default function ProviderOnboardingFormWizard({
         "pre-registration uploads finalized",
         submitPayloadSummary,
       );
-      if (uid) {
-        trackMetaStandardEvent(
-          "CompleteRegistration",
-          `provider-registration-complete:${uid}`,
-          {
-            content_name: "Provider verification submitted",
-            locale,
-            status: "pending_review",
-          },
-        );
-      }
       try {
         await signOut(getFirebaseAuth());
         logOnboardingClient("temporary provider web session signed out", {

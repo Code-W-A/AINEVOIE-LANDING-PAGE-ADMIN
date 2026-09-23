@@ -1,6 +1,7 @@
 "use client";
 
 import Script from "next/script";
+import { usePathname } from "next/navigation";
 
 const META_PIXEL_ID =
   process.env.NEXT_PUBLIC_META_PIXEL_ID?.match(/^\d+$/)?.[0] ?? null;
@@ -81,7 +82,10 @@ export function trackMetaCustomEvent(
 }
 
 export default function MetaPixel() {
+  const pathname = usePathname();
+
   if (!META_PIXEL_ID) return null;
+  if (pathname?.includes("/providers/onboarding")) return null;
 
   const pixelCode = `
     !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
