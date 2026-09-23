@@ -36,21 +36,37 @@ export default async function ProviderOnboardingSuccessPage({
   ];
 
   return (
-    <main className="pt-[160px] pb-24">
+    <main className="pt-[120px] pb-24 sm:pt-[160px]">
       <section className="container max-w-[1100px]">
-        <div className="shadow-card dark:bg-dark dark:shadow-card-dark mx-auto max-w-[820px] rounded-2xl bg-white p-8 text-center sm:p-10">
-          <div className="bg-primary/10 mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full">
-            <CheckCircle2 className="text-primary h-10 w-10" />
+        <div className="shadow-card dark:bg-dark dark:shadow-card-dark mx-auto max-w-[820px] rounded-2xl bg-white p-5 text-center sm:p-10">
+          <div className="bg-primary/10 mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full sm:mb-5 sm:h-16 sm:w-16">
+            <CheckCircle2 className="text-primary h-7 w-7 sm:h-10 sm:w-10" />
           </div>
-          <span className="text-primary mb-3 block text-lg font-medium">
+          <span className="text-primary mb-2 block text-base font-medium sm:mb-3 sm:text-lg">
             {t("badge")}
           </span>
-          <h1 className="mb-4 text-3xl font-bold text-black sm:text-4xl dark:text-white">
+          <h1 className="mb-3 text-2xl font-bold text-black sm:mb-4 sm:text-4xl dark:text-white">
             {t("title")}
           </h1>
-          <p className="text-body mx-auto max-w-[680px] text-base">
+          <p className="text-body mx-auto max-w-[680px] text-sm leading-6 sm:text-base">
             {t("intro")}
           </p>
+          <div className="border-primary/20 bg-primary/5 mx-auto mt-5 max-w-[660px] rounded-xl border px-4 py-4 sm:mt-7 sm:px-6 sm:py-5">
+            <h2 className="text-lg font-semibold text-black sm:text-xl dark:text-white">
+              {t("downloadTitle")}
+            </h2>
+            <p className="text-body mx-auto mt-2 max-w-[560px] text-sm leading-5 sm:leading-6">
+              {t("downloadDescription")}
+            </p>
+            <AppStoreLinks
+              androidLabel={t("downloadAndroid")}
+              iosLabel={t("downloadIos")}
+              className="mt-3 justify-center sm:mt-4"
+            />
+            <p className="text-body mx-auto mt-2 max-w-[560px] text-sm sm:mt-3">
+              {t("downloadStatusHint")}
+            </p>
+          </div>
         </div>
 
         <div className="mt-8 grid gap-6 md:grid-cols-3">
@@ -89,23 +105,6 @@ export default async function ProviderOnboardingSuccessPage({
               </p>
             </div>
           </div>
-        </div>
-
-        <div className="shadow-card dark:bg-dark dark:shadow-card-dark mt-8 rounded-2xl bg-white p-6 text-center sm:p-8">
-          <h2 className="text-2xl font-semibold text-black dark:text-white">
-            {t("downloadTitle")}
-          </h2>
-          <p className="text-body mx-auto mt-2 max-w-[620px] text-sm">
-            {t("downloadDescription")}
-          </p>
-          <AppStoreLinks
-            androidLabel={t("downloadAndroid")}
-            iosLabel={t("downloadIos")}
-            className="mt-5 justify-center"
-          />
-          <p className="text-body mx-auto mt-4 max-w-[620px] text-sm">
-            {t("downloadStatusHint")}
-          </p>
         </div>
 
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
