@@ -644,6 +644,8 @@
     "service": "Serviciul oferit",
     "password": "Parolă",
     "passwordPlaceholder": "Minimum 8 caractere",
+    "confirmPassword": "Confirmă parola",
+    "confirmPasswordPlaceholder": "Introdu din nou parola",
     "termsBefore": "Sunt de acord cu",
     "terms": "termenii și condițiile",
     "termsAnd": "și cu",
@@ -655,6 +657,7 @@
     "requiredError": "Completează toate câmpurile și acceptă termenii pentru a continua.",
     "phoneError": "Introdu un număr de telefon valid.",
     "passwordError": "Parola trebuie să aibă minimum 8 caractere.",
+    "passwordMismatchError": "Parolele nu coincid.",
     "genericError": "Nu am putut crea contul. Încearcă din nou."
   },
   "QuickProviderSignupSuccess": {

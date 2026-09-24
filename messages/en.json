@@ -644,6 +644,8 @@
     "service": "Service offered",
     "password": "Password",
     "passwordPlaceholder": "At least 8 characters",
+    "confirmPassword": "Confirm password",
+    "confirmPasswordPlaceholder": "Enter your password again",
     "termsBefore": "I agree to the",
     "terms": "terms and conditions",
     "termsAnd": "and the",
@@ -655,6 +657,7 @@
     "requiredError": "Complete every field and accept the terms to continue.",
     "phoneError": "Enter a valid phone number.",
     "passwordError": "Your password must contain at least 8 characters.",
+    "passwordMismatchError": "The passwords do not match.",
     "genericError": "We could not create your account. Please try again."
   },
   "QuickProviderSignupSuccess": {

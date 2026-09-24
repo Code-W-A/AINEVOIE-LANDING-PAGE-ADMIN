@@ -51,6 +51,7 @@ export default function QuickProviderSignupForm({
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [countyCode, setCountyCode] = useState("BH");
   const [cityCode, setCityCode] = useState(
     cities.some((city) => city.code === ORADEA_CITY_CODE)
@@ -148,6 +149,10 @@ export default function QuickProviderSignupForm({
     }
     if (password.length < 8) {
       setError(t("passwordError"));
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError(t("passwordMismatchError"));
       return;
     }
 
@@ -363,7 +368,7 @@ export default function QuickProviderSignupForm({
             </select>
           </label>
 
-          <label className="sm:col-span-2">
+          <label>
             <span className="mb-2 block text-sm font-medium text-black dark:text-white">
               {t("password")}
             </span>
@@ -374,6 +379,23 @@ export default function QuickProviderSignupForm({
               onChange={(event) => setPassword(event.target.value)}
               className="border-stroke dark:border-stroke-dark focus:border-primary w-full rounded-md border bg-transparent px-4 py-3 outline-none"
               placeholder={t("passwordPlaceholder")}
+              minLength={8}
+              disabled={submitting}
+              required
+            />
+          </label>
+
+          <label>
+            <span className="mb-2 block text-sm font-medium text-black dark:text-white">
+              {t("confirmPassword")}
+            </span>
+            <input
+              type="password"
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+              className="border-stroke dark:border-stroke-dark focus:border-primary w-full rounded-md border bg-transparent px-4 py-3 outline-none"
+              placeholder={t("confirmPasswordPlaceholder")}
               minLength={8}
               disabled={submitting}
               required
