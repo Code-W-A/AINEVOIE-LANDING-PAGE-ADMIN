@@ -18,11 +18,13 @@ import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
 
 type CityOption = {
+  countyCode: string;
   code: string;
   name: string;
 };
 
 type QuickProviderSignupFormProps = {
+  counties: readonly { code: string; name: string }[];
   cities: CityOption[];
 };
 
@@ -36,6 +38,7 @@ const FALLBACK_SERVICE_TYPES = getDefaultProviderServiceTypeItems();
 const ORADEA_CITY_CODE = "26564";
 
 export default function QuickProviderSignupForm({
+  counties,
   cities,
 }: QuickProviderSignupFormProps) {
   const locale = useLocale() as "ro" | "en";
@@ -48,10 +51,11 @@ export default function QuickProviderSignupForm({
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [countyCode, setCountyCode] = useState("BH");
   const [cityCode, setCityCode] = useState(
     cities.some((city) => city.code === ORADEA_CITY_CODE)
       ? ORADEA_CITY_CODE
-      : cities[0]?.code || "",
+      : "",
   );
   const [serviceType, setServiceType] = useState(
     FALLBACK_SERVICE_TYPES[0]?.value || "",
@@ -68,6 +72,15 @@ export default function QuickProviderSignupForm({
       })),
     [locale, serviceTypes],
   );
+  const cityOptions = useMemo(
+    () => cities.filter((city) => city.countyCode === countyCode),
+    [cities, countyCode],
+  );
+
+  function handleCountyChange(nextCountyCode: string) {
+    setCountyCode(nextCountyCode);
+    setCityCode("");
+  }
 
   useEffect(() => {
     trackMetaCustomEvent(
@@ -117,10 +130,15 @@ export default function QuickProviderSignupForm({
       !email.trim() ||
       !phone ||
       !password ||
+      !countyCode ||
       !cityCode ||
       !serviceType ||
       !acceptTerms
     ) {
+      setError(t("requiredError"));
+      return;
+    }
+    if (!cityOptions.some((city) => city.code === cityCode)) {
       setError(t("requiredError"));
       return;
     }
@@ -145,7 +163,7 @@ export default function QuickProviderSignupForm({
         body: JSON.stringify({
           acceptTerms: true,
           cityCode,
-          countyCode: "BH",
+          countyCode,
           email: email.trim(),
           fullName: fullName.trim(),
           legalStatus: "need_guidance",
@@ -165,6 +183,7 @@ export default function QuickProviderSignupForm({
 
       trackMetaStandardEvent("Lead", "provider-quick-lead:" + data.uid, {
         city_code: cityCode,
+        county_code: countyCode,
         content_name: "Provider quick signup",
         locale,
         service_type: serviceType,
@@ -286,6 +305,25 @@ export default function QuickProviderSignupForm({
 
           <label>
             <span className="mb-2 block text-sm font-medium text-black dark:text-white">
+              {t("county")}
+            </span>
+            <select
+              value={countyCode}
+              onChange={(event) => handleCountyChange(event.target.value)}
+              className="border-stroke dark:border-stroke-dark focus:border-primary w-full rounded-md border bg-transparent px-4 py-3 outline-none"
+              disabled={submitting}
+              required
+            >
+              {counties.map((county) => (
+                <option key={county.code} value={county.code}>
+                  {county.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            <span className="mb-2 block text-sm font-medium text-black dark:text-white">
               {t("city")}
             </span>
             <select
@@ -295,7 +333,10 @@ export default function QuickProviderSignupForm({
               disabled={submitting}
               required
             >
-              {cities.map((city) => (
+              <option value="" disabled>
+                {t("cityPlaceholder")}
+              </option>
+              {cityOptions.map((city) => (
                 <option key={city.code} value={city.code}>
                   {city.name}
                 </option>

@@ -9,6 +9,7 @@ export type RomaniaCounty = {
 
 export type RomaniaLocalityType =
   | "capital"
+  | "commune"
   | "county_seat_municipality"
   | "municipality"
   | "sector"
@@ -115,6 +116,26 @@ export const ROMANIA_URBAN_LOCALITIES = [
   { countyCode: "BH", countyName: "Bihor", cityCode: "26840", cityName: "Ștei", citySlug: "stei", type: "town" },
   { countyCode: "BH", countyName: "Bihor", cityCode: "32027", cityName: "Valea lui Mihai", citySlug: "valea-lui-mihai", type: "town" },
   { countyCode: "BH", countyName: "Bihor", cityCode: "27007", cityName: "Vașcău", citySlug: "vascau", type: "town" },
+  { countyCode: "BH", countyName: "Bihor", cityCode: "27445", cityName: "Biharia", citySlug: "biharia", type: "commune" },
+  { countyCode: "BH", countyName: "Bihor", cityCode: "27640", cityName: "Borș", citySlug: "bors", type: "commune" },
+  { countyCode: "BH", countyName: "Bihor", cityCode: "28255", cityName: "Cefa", citySlug: "cefa", type: "commune" },
+  { countyCode: "BH", countyName: "Bihor", cityCode: "28424", cityName: "Cetariu", citySlug: "cetariu", type: "commune" },
+  { countyCode: "BH", countyName: "Bihor", cityCode: "28825", cityName: "Copăcel", citySlug: "copacel", type: "commune" },
+  { countyCode: "BH", countyName: "Bihor", cityCode: "29163", cityName: "Dobrești", citySlug: "dobresti", type: "commune" },
+  { countyCode: "BH", countyName: "Bihor", cityCode: "29476", cityName: "Girișu de Criș", citySlug: "girisu-de-cris", type: "commune" },
+  { countyCode: "BH", countyName: "Bihor", cityCode: "29528", cityName: "Hidișelu de Sus", citySlug: "hidiselu-de-sus", type: "commune" },
+  { countyCode: "BH", countyName: "Bihor", cityCode: "29582", cityName: "Holod", citySlug: "holod", type: "commune" },
+  { countyCode: "BH", countyName: "Bihor", cityCode: "29733", cityName: "Ineu", citySlug: "ineu", type: "commune" },
+  { countyCode: "BH", countyName: "Bihor", cityCode: "29911", cityName: "Lugașu de Jos", citySlug: "lugasu-de-jos", type: "commune" },
+  { countyCode: "BH", countyName: "Bihor", cityCode: "30023", cityName: "Mădăras", citySlug: "madaras", type: "commune" },
+  { countyCode: "BH", countyName: "Bihor", cityCode: "30158", cityName: "Nojorid", citySlug: "nojorid", type: "commune" },
+  { countyCode: "BH", countyName: "Bihor", cityCode: "30283", cityName: "Oșorhei", citySlug: "osorhei", type: "commune" },
+  { countyCode: "BH", countyName: "Bihor", cityCode: "28433", cityName: "Paleu", citySlug: "paleu", type: "commune" },
+  { countyCode: "BH", countyName: "Bihor", cityCode: "30880", cityName: "Săcădat", citySlug: "sacadat", type: "commune" },
+  { countyCode: "BH", countyName: "Bihor", cityCode: "26591", cityName: "Sânmartin", citySlug: "sanmartin", type: "commune" },
+  { countyCode: "BH", countyName: "Bihor", cityCode: "26662", cityName: "Sântandrei", citySlug: "santandrei", type: "commune" },
+  { countyCode: "BH", countyName: "Bihor", cityCode: "27490", cityName: "Tămășeu", citySlug: "tamaseu", type: "commune" },
+  { countyCode: "BH", countyName: "Bihor", cityCode: "31725", cityName: "Tileagd", citySlug: "tileagd", type: "commune" },
   { countyCode: "BN", countyName: "Bistrița-Năsăud", cityCode: "32483", cityName: "Beclean", citySlug: "beclean", type: "town" },
   { countyCode: "BN", countyName: "Bistrița-Năsăud", cityCode: "32394", cityName: "Bistrița", citySlug: "bistrita", type: "county_seat_municipality" },
   { countyCode: "BN", countyName: "Bistrița-Năsăud", cityCode: "32544", cityName: "Năsăud", citySlug: "nasaud", type: "town" },

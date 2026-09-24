@@ -1,6 +1,9 @@
 import QuickProviderSignupForm from "./QuickProviderSignupForm";
 import { routing } from "@/i18n/routing";
-import { getCitiesByCounty } from "@/lib/romaniaLocations";
+import {
+  ROMANIA_COUNTIES,
+  ROMANIA_URBAN_LOCALITIES,
+} from "@/lib/romaniaLocations";
 import type { Metadata } from "next";
 import { setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
@@ -18,15 +21,16 @@ export default async function QuickProviderSignupPage({ params }: PageProps) {
   }
   setRequestLocale(locale);
 
-  const cities = getCitiesByCounty("BH").map((city) => ({
+  const cities = ROMANIA_URBAN_LOCALITIES.map((city) => ({
+    countyCode: city.countyCode,
     code: city.cityCode,
     name: city.cityName,
   }));
 
   return (
-    <main className="pb-20 pt-[140px] sm:pb-24 sm:pt-[160px]">
+    <main className="pt-[140px] pb-20 sm:pt-[160px] sm:pb-24">
       <section className="container max-w-[1180px]">
-        <QuickProviderSignupForm cities={cities} />
+        <QuickProviderSignupForm counties={ROMANIA_COUNTIES} cities={cities} />
       </section>
     </main>
   );
