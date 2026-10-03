@@ -32,6 +32,7 @@ type ApiResponse = {
   error?: string;
   status?: string;
   uid?: string;
+  metaLeadEventId?: string;
 };
 
 const FALLBACK_SERVICE_TYPES = getDefaultProviderServiceTypeItems();
@@ -167,6 +168,7 @@ export default function QuickProviderSignupForm({
         },
         body: JSON.stringify({
           acceptTerms: true,
+          metaTrackingVersion: "quick-signup-v1",
           cityCode,
           countyCode,
           email: email.trim(),
@@ -186,13 +188,18 @@ export default function QuickProviderSignupForm({
         throw new Error(data.error || t("genericError"));
       }
 
-      trackMetaStandardEvent("Lead", "provider-quick-lead:" + data.uid, {
-        city_code: cityCode,
-        county_code: countyCode,
-        content_name: "Provider quick signup",
-        locale,
-        service_type: serviceType,
-      });
+      trackMetaStandardEvent(
+        "Lead",
+        "provider-quick-lead:" + data.uid,
+        {
+          city_code: cityCode,
+          county_code: countyCode,
+          content_name: "Provider quick signup",
+          locale,
+          service_type: serviceType,
+        },
+        data.metaLeadEventId,
+      );
       router.push("/providers/quick-signup/success");
     } catch (submitError) {
       setError(

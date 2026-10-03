@@ -5,6 +5,7 @@ import { type AppLocale, getRequestLocale } from "@/lib/apiLocale";
 import { getApiErrorMessage } from "@/lib/apiMessages";
 import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
 import { captureServerException } from "@/lib/sentryServer";
+import { scheduleProviderLead } from "@/lib/metaConversions";
 import {
   PROVIDER_LAUNCH_CONTACT_CONSENT_VERSION,
   PROVIDER_PRIVACY_VERSION,
@@ -49,6 +50,7 @@ type OnboardingPayload = {
   launchContactConsent?: boolean;
   acceptTerms?: boolean;
   locale?: string;
+  metaTrackingVersion?: unknown;
 };
 
 const MIN_PASSWORD_LENGTH = 8;
@@ -478,9 +480,16 @@ export async function POST(request: Request) {
       toStatus: "pre_registered",
     });
 
+    // Only the updated quick-signup client understands the shared event ID.
+    // Older clients and other onboarding flows must not receive a second Lead.
+    const metaLeadEventId = body.metaTrackingVersion === "quick-signup-v1"
+      ? scheduleProviderLead({ request, uid: userRecord.uid, email, phone, locale })
+      : undefined;
+
     return NextResponse.json({
       status: "created",
       uid: userRecord.uid,
+      ...(metaLeadEventId ? { metaLeadEventId } : {}),
       welcomeEmailSent: false,
       newsletterStatusAtSignup,
     });

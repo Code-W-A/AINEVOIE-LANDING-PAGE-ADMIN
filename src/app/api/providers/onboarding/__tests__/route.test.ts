@@ -5,7 +5,10 @@ const mocks = vi.hoisted(() => ({
   getAdminDb: vi.fn(),
   getAdminAuth: vi.fn(),
   sendEmail: vi.fn(),
+  scheduleProviderLead: vi.fn(),
 }));
+
+vi.mock("@/lib/metaConversions", () => ({ scheduleProviderLead: mocks.scheduleProviderLead }));
 
 vi.mock("@/lib/email", () => ({
   sendEmail: mocks.sendEmail,
@@ -115,6 +118,7 @@ function firestoreForSuccessfulSignup(settingsData: Record<string, unknown> | nu
 describe("POST /api/providers/onboarding", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.scheduleProviderLead.mockReset();
   });
 
   it("returns 400 when required fields are missing", async () => {
@@ -125,6 +129,39 @@ describe("POST /api/providers/onboarding", () => {
       code: "MISSING_FIELDS",
     });
     expect(mocks.getAdminDb).not.toHaveBeenCalled();
+  });
+
+  it("returns a shared Lead ID only after a successful updated quick signup", async () => {
+    const { providerEventAdd } = firestoreForSuccessfulSignup();
+    mocks.getAdminAuth.mockReturnValue({
+      createUser: vi.fn().mockResolvedValue({ uid: "provider-uid" }),
+      setCustomUserClaims: vi.fn().mockResolvedValue(undefined),
+    });
+    mocks.scheduleProviderLead.mockImplementation(() => {
+      expect(providerEventAdd).toHaveBeenCalled();
+      return "shared-id";
+    });
+    const response = await POST(request({ ...validPayload, metaTrackingVersion: "quick-signup-v1" }));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ uid: "provider-uid", metaLeadEventId: "shared-id" });
+    expect(mocks.scheduleProviderLead).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      uid: "provider-uid", email: "provider@example.com", phone: "+40700000000", locale: "ro",
+    }));
+  });
+
+  it("does not schedule a Lead when the signup fails after account creation", async () => {
+    const { providerSet } = firestoreForSuccessfulSignup();
+    providerSet.mockRejectedValue(new Error("database unavailable"));
+    mocks.getAdminAuth.mockReturnValue({ createUser: vi.fn().mockResolvedValue({ uid: "provider-uid" }) });
+    const response = await POST(request({ ...validPayload, metaTrackingVersion: "quick-signup-v1" }));
+    expect(response.status).toBe(500);
+    expect(mocks.scheduleProviderLead).not.toHaveBeenCalled();
+  });
+
+  it("does not schedule a Lead for invalid submissions", async () => {
+    const response = await POST(request({ metaTrackingVersion: "quick-signup-v1" }));
+    expect(response.status).toBe(400);
+    expect(mocks.scheduleProviderLead).not.toHaveBeenCalled();
   });
 
   it("returns 400 when email is invalid", async () => {
@@ -262,6 +299,7 @@ describe("POST /api/providers/onboarding", () => {
     const response = await POST(request(validPayload));
 
     expect(response.status).toBe(200);
+    expect(mocks.scheduleProviderLead).not.toHaveBeenCalled();
     await expect(response.json()).resolves.toMatchObject({
       status: "created",
       uid: "provider-uid",

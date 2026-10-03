@@ -46,18 +46,27 @@ function sendMetaEvent(
   parameters: Record<string, unknown>,
   dedupeKey: string,
   attempt = 0,
+  eventId?: string,
 ) {
   if (wasMetaEventSent(dedupeKey)) return;
 
   if (typeof window.fbq === "function") {
-    window.fbq(method, event, parameters);
-    markMetaEventSent(dedupeKey);
+    try {
+      if (eventId) {
+        window.fbq(method, event, parameters, { eventID: eventId });
+      } else {
+        window.fbq(method, event, parameters);
+      }
+      markMetaEventSent(dedupeKey);
+    } catch {
+      // A blocked or broken analytics script must never interrupt signup.
+    }
     return;
   }
 
   if (attempt < 8) {
     window.setTimeout(
-      () => sendMetaEvent(method, event, parameters, dedupeKey, attempt + 1),
+      () => sendMetaEvent(method, event, parameters, dedupeKey, attempt + 1, eventId),
       250,
     );
   }
@@ -67,9 +76,10 @@ export function trackMetaStandardEvent(
   event: MetaStandardEvent,
   dedupeKey: string,
   parameters: Record<string, unknown> = {},
+  eventId?: string,
 ) {
   if (typeof window === "undefined") return;
-  sendMetaEvent("track", event, parameters, dedupeKey);
+  sendMetaEvent("track", event, parameters, dedupeKey, 0, eventId);
 }
 
 export function trackMetaCustomEvent(

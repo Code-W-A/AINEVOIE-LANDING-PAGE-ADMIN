@@ -16,6 +16,16 @@ async function expectPageLoads(page: Page, path: string) {
 }
 
 test.describe("application smoke checks", () => {
+  test("root homepage defaults to Romanian with an English browser language", async ({
+    page,
+  }) => {
+    await page.setExtraHTTPHeaders({ "Accept-Language": "en-US,en;q=0.9" });
+    await expectPageLoads(page, "/");
+
+    await expect(page.locator("html")).toHaveAttribute("lang", "ro");
+    await expect(page).not.toHaveURL(/\/en(?:\/|$)/);
+  });
+
   test("Romanian homepage loads", async ({ page }) => {
     await expectPageLoads(page, "/ro");
   });
