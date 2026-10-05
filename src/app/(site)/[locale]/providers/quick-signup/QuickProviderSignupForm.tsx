@@ -63,6 +63,7 @@ export default function QuickProviderSignupForm({
     FALLBACK_SERVICE_TYPES[0]?.value || "",
   );
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [newsletterOptIn, setNewsletterOptIn] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -175,7 +176,7 @@ export default function QuickProviderSignupForm({
           fullName: fullName.trim(),
           legalStatus: "need_guidance",
           locale,
-          newsletterOptIn: false,
+          newsletterOptIn,
           launchContactConsent: false,
           password,
           phone,
@@ -436,6 +437,27 @@ export default function QuickProviderSignupForm({
               {t("privacy")}
             </Link>
             {t("termsAfter")}
+          </span>
+        </label>
+
+        <label className="mt-4 flex items-start gap-3">
+          <input
+            type="checkbox"
+            checked={newsletterOptIn}
+            onChange={(event) => setNewsletterOptIn(event.target.checked)}
+            disabled={submitting}
+            className="accent-primary mt-1 h-4 w-4 shrink-0"
+          />
+          <span className="text-body text-sm leading-6">
+            {t("newsletterOptInBefore")}{" "}
+            <Link
+              href="/privacy"
+              target="_blank"
+              className="text-primary hover:underline"
+            >
+              {t("newsletterPrivacyLink")}
+            </Link>
+            {t("newsletterOptInAfter")}
           </span>
         </label>
 

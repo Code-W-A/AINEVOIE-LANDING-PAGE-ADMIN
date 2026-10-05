@@ -54,6 +54,7 @@ type OnboardingPayload = {
 };
 
 const MIN_PASSWORD_LENGTH = 8;
+const PROVIDER_QUICK_SIGNUP_NEWSLETTER_CONSENT_VERSION = "provider_quick_signup_v1";
 
 function normalize(value?: string) {
   return (value || "").trim();
@@ -133,6 +134,13 @@ export async function POST(request: Request) {
     const estimatedSetupTimeline = normalize(body.estimatedSetupTimeline);
     const hasAccountant = body.hasAccountant || null;
     const newsletterOptIn = body.newsletterOptIn === true;
+    const isQuickSignup = body.metaTrackingVersion === "quick-signup-v1";
+    const newsletterConsentSource = isQuickSignup
+      ? "provider_quick_signup"
+      : "provider_onboarding";
+    const newsletterConsentTextVersion = isQuickSignup
+      ? PROVIDER_QUICK_SIGNUP_NEWSLETTER_CONSENT_VERSION
+      : "v1";
     const launchContactConsent = body.launchContactConsent === true;
     const acceptTerms = body.acceptTerms === true;
 
@@ -288,6 +296,15 @@ export async function POST(request: Request) {
           const status = existingSubscriber.docs[0].get("status");
 
           if (status === "active") {
+            await docRef.update({
+              consentGranted: true,
+              consentCapturedAt: FieldValue.serverTimestamp(),
+              consentSource: newsletterConsentSource,
+              consentTextVersion: newsletterConsentTextVersion,
+              consentMethod: "single_opt_in",
+              consentWithdrawnAt: null,
+              updatedAt: FieldValue.serverTimestamp(),
+            });
             newsletterStatusAtSignup = "already_active";
           } else {
             await docRef.update({
@@ -297,8 +314,8 @@ export async function POST(request: Request) {
               source: "provider_onboarding",
               consentGranted: true,
               consentCapturedAt: FieldValue.serverTimestamp(),
-              consentSource: "provider_onboarding",
-              consentTextVersion: "v1",
+              consentSource: newsletterConsentSource,
+              consentTextVersion: newsletterConsentTextVersion,
               consentMethod: "single_opt_in",
               consentWithdrawnAt: null,
               updatedAt: FieldValue.serverTimestamp(),
@@ -314,8 +331,8 @@ export async function POST(request: Request) {
             source: "provider_onboarding",
             consentGranted: true,
             consentCapturedAt: FieldValue.serverTimestamp(),
-            consentSource: "provider_onboarding",
-            consentTextVersion: "v1",
+            consentSource: newsletterConsentSource,
+            consentTextVersion: newsletterConsentTextVersion,
             consentMethod: "single_opt_in",
             consentWithdrawnAt: null,
             createdAt: FieldValue.serverTimestamp(),

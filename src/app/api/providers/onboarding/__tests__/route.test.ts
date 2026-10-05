@@ -75,7 +75,10 @@ function firestoreWithProviderSnapshot(snapshot: QuerySnapshot) {
   return { collection, get, limit, where };
 }
 
-function firestoreForSuccessfulSignup(settingsData: Record<string, unknown> | null = null) {
+function firestoreForSuccessfulSignup(
+  settingsData: Record<string, unknown> | null = null,
+  existingNewsletterStatus: string | null = null,
+) {
   const providersGet = vi.fn().mockResolvedValue({
     docs: [],
     empty: true,
@@ -89,6 +92,19 @@ function firestoreForSuccessfulSignup(settingsData: Record<string, unknown> | nu
     collection: providerCollection,
     set: providerSet,
   }));
+  const newsletterAdd = vi.fn().mockResolvedValue({ id: "newsletter-1" });
+  const newsletterUpdate = vi.fn().mockResolvedValue(undefined);
+  const newsletterGet = vi.fn().mockResolvedValue(existingNewsletterStatus
+    ? {
+        docs: [{
+          get: (field: string) => field === "status" ? existingNewsletterStatus : null,
+          ref: { update: newsletterUpdate },
+        }],
+        empty: false,
+      }
+    : { docs: [], empty: true });
+  const newsletterLimit = vi.fn(() => ({ get: newsletterGet }));
+  const newsletterWhere = vi.fn(() => ({ limit: newsletterLimit }));
   const providersCollection = {
     doc: providerDoc,
     where: providersWhere,
@@ -107,12 +123,16 @@ function firestoreForSuccessfulSignup(settingsData: Record<string, unknown> | nu
       return providersCollection;
     }
 
+    if (name === "newsletter_subscribers") {
+      return { add: newsletterAdd, where: newsletterWhere };
+    }
+
     throw new Error(`Unexpected collection: ${name}`);
   });
   const db = { collection };
 
   mocks.getAdminDb.mockReturnValue(db);
-  return { providerEventAdd, providerSet };
+  return { newsletterAdd, newsletterUpdate, newsletterWhere, providerEventAdd, providerSet };
 }
 
 describe("POST /api/providers/onboarding", () => {
@@ -290,7 +310,7 @@ describe("POST /api/providers/onboarding", () => {
   });
 
   it("creates a provider with county and city snapshots", async () => {
-    const { providerEventAdd, providerSet } = firestoreForSuccessfulSignup();
+    const { newsletterWhere, providerEventAdd, providerSet } = firestoreForSuccessfulSignup();
     const createUser = vi.fn().mockResolvedValue({ uid: "provider-uid" });
     const setCustomUserClaims = vi.fn().mockResolvedValue(undefined);
     mocks.getAdminAuth.mockReturnValue({ createUser, setCustomUserClaims });
@@ -300,6 +320,7 @@ describe("POST /api/providers/onboarding", () => {
 
     expect(response.status).toBe(200);
     expect(mocks.scheduleProviderLead).not.toHaveBeenCalled();
+    expect(newsletterWhere).not.toHaveBeenCalled();
     await expect(response.json()).resolves.toMatchObject({
       status: "created",
       uid: "provider-uid",
@@ -439,5 +460,59 @@ describe("POST /api/providers/onboarding", () => {
         }),
       }),
     );
+  });
+
+  it("subscribes a quick-signup provider only after explicit newsletter opt-in", async () => {
+    const { newsletterAdd, providerSet } = firestoreForSuccessfulSignup();
+    mocks.getAdminAuth.mockReturnValue({
+      createUser: vi.fn().mockResolvedValue({ uid: "provider-uid" }),
+      setCustomUserClaims: vi.fn().mockResolvedValue(undefined),
+    });
+
+    const response = await POST(request({
+      ...validPayload,
+      metaTrackingVersion: "quick-signup-v1",
+      newsletterOptIn: true,
+    }));
+
+    expect(response.status).toBe(200);
+    expect(newsletterAdd).toHaveBeenCalledWith(expect.objectContaining({
+      email: "provider@example.com",
+      emailNormalized: "provider@example.com",
+      status: "active",
+      consentGranted: true,
+      consentCapturedAt: expect.anything(),
+      consentSource: "provider_quick_signup",
+      consentTextVersion: "provider_quick_signup_v1",
+      consentMethod: "single_opt_in",
+    }));
+    expect(providerSet).toHaveBeenCalledWith(expect.objectContaining({
+      newsletterOptIn: true,
+      newsletterStatusAtSignup: "subscribed",
+    }));
+  });
+
+  it("records fresh quick-signup consent when the email is already subscribed", async () => {
+    const { newsletterAdd, newsletterUpdate } = firestoreForSuccessfulSignup(null, "active");
+    mocks.getAdminAuth.mockReturnValue({
+      createUser: vi.fn().mockResolvedValue({ uid: "provider-uid" }),
+      setCustomUserClaims: vi.fn().mockResolvedValue(undefined),
+    });
+
+    const response = await POST(request({
+      ...validPayload,
+      metaTrackingVersion: "quick-signup-v1",
+      newsletterOptIn: true,
+    }));
+
+    expect(response.status).toBe(200);
+    expect(newsletterAdd).not.toHaveBeenCalled();
+    expect(newsletterUpdate).toHaveBeenCalledWith(expect.objectContaining({
+      consentGranted: true,
+      consentCapturedAt: expect.anything(),
+      consentSource: "provider_quick_signup",
+      consentTextVersion: "provider_quick_signup_v1",
+      consentWithdrawnAt: null,
+    }));
   });
 });
