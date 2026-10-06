@@ -26,14 +26,14 @@ const Testimonials = () => {
       },
       {
         quote: t("t3"),
-        authorImage: "/images/testimonials/author-3.png",
+        authorImage: "/images/testimonials/author-04.png",
         authorName: t("t3name"),
         authorRole: t("t3role"),
         review: 4.9,
       },
       {
         quote: t("t4"),
-        authorImage: "/images/testimonials/author-04.png",
+        authorImage: "/images/testimonials/author-3.png",
         authorName: t("t4name"),
         authorRole: t("t4role"),
         review: 4.8,
