@@ -6,6 +6,7 @@ import { getApiErrorMessage } from "@/lib/apiMessages";
 import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
 import { captureServerException } from "@/lib/sentryServer";
 import { scheduleProviderLead } from "@/lib/metaConversions";
+import { createProviderAppClickToken } from "@/lib/providerAppClickToken";
 import {
   PROVIDER_LAUNCH_CONTACT_CONSENT_VERSION,
   PROVIDER_PRIVACY_VERSION,
@@ -506,6 +507,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       status: "created",
       uid: userRecord.uid,
+      ...(isQuickSignup ? { appClickToken: createProviderAppClickToken(userRecord.uid) } : {}),
       ...(metaLeadEventId ? { metaLeadEventId } : {}),
       welcomeEmailSent: false,
       newsletterStatusAtSignup,

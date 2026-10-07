@@ -32,6 +32,11 @@ export type ProviderChecklistItem = {
 };
 
 export type ProviderDocument = {
+  appDownloadClicks?: Partial<Record<"android" | "ios", {
+    count?: number;
+    firstClickedAt?: string | null;
+    lastClickedAt?: string | null;
+  }>>;
   uid?: string;
   id?: string;
   status?: string;

@@ -91,6 +91,7 @@ export default async function QuickProviderSignupSuccessPage({
                 androidLabel={t("downloadAndroid")}
                 iosLabel={t("downloadIos")}
                 featured
+                trackQuickSignupClicks
                 className="mt-3"
               />
               <p className="text-body mt-4 text-xs leading-5">

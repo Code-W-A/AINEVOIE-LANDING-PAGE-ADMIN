@@ -1,4 +1,7 @@
+"use client";
+
 import { APP_STORE_LINKS } from "@/constants/appStoreLinks";
+import { trackProviderAppClick } from "@/lib/providerAppClickClient";
 import { Apple, Play } from "lucide-react";
 
 type AppStoreLinksProps = {
@@ -7,6 +10,7 @@ type AppStoreLinksProps = {
   compact?: boolean;
   featured?: boolean;
   className?: string;
+  trackQuickSignupClicks?: boolean;
 };
 
 const STORE_LINKS = [
@@ -28,6 +32,7 @@ export default function AppStoreLinks({
   compact = false,
   featured = false,
   className = "",
+  trackQuickSignupClicks = false,
 }: AppStoreLinksProps) {
   const labels = { android: androidLabel, ios: iosLabel };
 
@@ -39,6 +44,12 @@ export default function AppStoreLinks({
         <a
           key={platform}
           href={href}
+          onClick={() => {
+            if (trackQuickSignupClicks) trackProviderAppClick(platform);
+          }}
+          onAuxClick={(event) => {
+            if (trackQuickSignupClicks && event.button === 1) trackProviderAppClick(platform);
+          }}
           target="_blank"
           rel="noopener noreferrer"
           aria-label={labels[platform]}

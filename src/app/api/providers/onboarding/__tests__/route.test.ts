@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   captureServerException: vi.fn(),
@@ -24,6 +24,7 @@ vi.mock("@/lib/sentryServer", () => ({
 }));
 
 import { POST } from "../route";
+import { verifyProviderAppClickToken } from "@/lib/providerAppClickToken";
 
 type QuerySnapshot = {
   empty: boolean;
@@ -139,6 +140,26 @@ describe("POST /api/providers/onboarding", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.scheduleProviderLead.mockReset();
+    vi.stubEnv("PROVIDER_APP_CLICK_SECRET", "");
+  });
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("returns a provider-bound token only for quick signup with a configured secret", async () => {
+    firestoreForSuccessfulSignup();
+    mocks.getAdminAuth.mockReturnValue({
+      createUser: vi.fn().mockResolvedValue({ uid: "provider-uid" }),
+      setCustomUserClaims: vi.fn().mockResolvedValue(undefined),
+    });
+    vi.stubEnv("PROVIDER_APP_CLICK_SECRET", "test-secret");
+    const response = await POST(request({ ...validPayload, metaTrackingVersion: "quick-signup-v1" }));
+    expect(response.status).toBe(200);
+    expect(verifyProviderAppClickToken((await response.json()).appClickToken)).toBe("provider-uid");
+    const normal = await POST(request(validPayload));
+    expect((await normal.json()).appClickToken).toBeUndefined();
+    vi.stubEnv("PROVIDER_APP_CLICK_SECRET", "");
+    const disabled = await POST(request({ ...validPayload, metaTrackingVersion: "quick-signup-v1" }));
+    expect(disabled.status).toBe(200);
+    expect((await disabled.json()).appClickToken).toBeUndefined();
   });
 
   it("returns 400 when required fields are missing", async () => {

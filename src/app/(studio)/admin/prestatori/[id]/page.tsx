@@ -39,6 +39,7 @@ import {
 import { DeleteProviderDialog } from "./components/DeleteProviderDialog";
 import { DocumentPreviewDialog } from "./components/DocumentPreviewDialog";
 import { ProviderDecisionCard } from "./components/ProviderDecisionCard";
+import { ProviderAppDownloadClicks } from "./components/ProviderAppDownloadClicks";
 import { ProviderDetailHeader } from "./components/ProviderDetailHeader";
 import { ProviderDetailTabs } from "./components/ProviderDetailTabs";
 import { ProviderPublicSyncBanner } from "./components/ProviderPublicSyncBanner";
@@ -424,6 +425,7 @@ export default function ProviderDetailPage() {
       )}
 
       <ProviderDecisionCard summary={approvalSummary} />
+      <ProviderAppDownloadClicks provider={provider} />
 
       {showPublicSyncBanner && (
         <ProviderPublicSyncBanner

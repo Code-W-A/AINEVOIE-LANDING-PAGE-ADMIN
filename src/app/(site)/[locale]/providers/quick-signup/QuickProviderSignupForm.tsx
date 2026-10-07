@@ -10,6 +10,7 @@ import {
   type ProviderServiceTypeItem,
 } from "@/lib/providerServiceTypes";
 import ProviderAppPreview from "@/components/ProviderAppPreview";
+import { saveProviderAppClickToken } from "@/lib/providerAppClickClient";
 import { isValidPhoneNumber } from "libphonenumber-js";
 import { CheckCircle2, Loader2, ShieldCheck, Sparkles } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
@@ -33,6 +34,7 @@ type ApiResponse = {
   status?: string;
   uid?: string;
   metaLeadEventId?: string;
+  appClickToken?: string;
 };
 
 const FALLBACK_SERVICE_TYPES = getDefaultProviderServiceTypeItems();
@@ -159,6 +161,7 @@ export default function QuickProviderSignupForm({
     }
 
     setSubmitting(true);
+    saveProviderAppClickToken();
     try {
       const response = await fetch("/api/providers/onboarding", {
         method: "POST",
@@ -201,6 +204,7 @@ export default function QuickProviderSignupForm({
         },
         data.metaLeadEventId,
       );
+      saveProviderAppClickToken(data.appClickToken);
       router.push("/providers/quick-signup/success");
     } catch (submitError) {
       setError(
