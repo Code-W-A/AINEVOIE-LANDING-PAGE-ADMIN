@@ -32,6 +32,8 @@ export type ProviderChecklistItem = {
 };
 
 export type ProviderDocument = {
+  campaignAttribution?: Partial<Record<"utm_source" | "utm_medium" | "utm_campaign" | "utm_content" | "utm_term", string>>;
+  metaAcquisition?: { measurementConsent?: boolean };
   appDownloadClicks?: Partial<Record<"android" | "ios", {
     count?: number;
     firstClickedAt?: string | null;

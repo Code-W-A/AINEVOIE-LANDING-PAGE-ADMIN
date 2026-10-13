@@ -1,6 +1,7 @@
 // Server-only: imported exclusively by the onboarding route.
 import { createHash } from "node:crypto";
 import { after } from "next/server";
+import { hasServerMetaMeasurementConsent } from "./providerAcquisition";
 
 type ProviderLead = {
   request: Request;
@@ -10,11 +11,11 @@ type ProviderLead = {
   locale: "ro" | "en";
 };
 
-function hash(value: string) {
+export function hash(value: string) {
   return createHash("sha256").update(value).digest("hex");
 }
 
-function readMetaCookie(request: Request, name: "_fbp" | "_fbc") {
+export function readMetaCookie(request: Request, name: "_fbp" | "_fbc") {
   const value = request.headers
     .get("cookie")
     ?.split(";")
@@ -33,6 +34,7 @@ function readMetaCookie(request: Request, name: "_fbp" | "_fbc") {
 export function scheduleProviderLead(input: ProviderLead): string | undefined {
   try {
     const eventId = `provider-lead-${hash(input.uid)}`;
+    if (!hasServerMetaMeasurementConsent(input.request)) return eventId;
     const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID?.trim();
     const token = process.env.META_CONVERSIONS_API_ACCESS_TOKEN?.trim();
     const version = process.env.META_GRAPH_API_VERSION?.trim();
@@ -70,7 +72,7 @@ export function scheduleProviderLead(input: ProviderLead): string | undefined {
           event_id: eventId,
           event_time: Math.floor(Date.now() / 1000),
           action_source: "website",
-          event_source_url: `https://ai-nevoie.ro/${input.locale}/providers/quick-signup`,
+          event_source_url: `https://www.ai-nevoie.ro/${input.locale === "en" ? "en/" : ""}providers/quick-signup`,
           user_data: userData,
           custom_data: { content_name: "Provider quick signup" },
         },
@@ -99,7 +101,10 @@ export function scheduleProviderLead(input: ProviderLead): string | undefined {
             const result = (await response.json()) as {
               events_received?: number;
             };
-            if (result.events_received === 1) return;
+            if (result.events_received === 1) {
+              console.info("[meta-capi] Lead accepted", { eventId });
+              return;
+            }
           } else if (response.status < 500 && response.status !== 429) {
             // Never log Meta response bodies, credentials or personal data.
             console.warn("[meta-capi] Lead rejected", {

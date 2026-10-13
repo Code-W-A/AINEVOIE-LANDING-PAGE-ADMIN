@@ -31,7 +31,7 @@ const Footer = () => {
         navItems: [
           { label: t("navClients"), route: "/#home" },
           { label: t("navChooseProvider"), route: "/#faq" },
-          { label: t("navSafety"), route: "/#testimonials" },
+          { label: t("navSafety"), route: "/#faq" },
           { label: t("navFaq"), route: "/#faq" },
           { label: t("navContact"), route: "/#support" },
         ],

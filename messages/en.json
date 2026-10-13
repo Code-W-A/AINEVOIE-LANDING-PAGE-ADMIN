@@ -1,7 +1,7 @@
 {
   "Metadata": {
-    "homeTitle": "Ainevoie — connect customers with cleaning businesses, fast",
-    "homeDescription": "Ainevoie connects people and businesses with professional cleaners: search, compare, book and pay in a few taps — all in one app.",
+    "homeTitle": "Ainevoie — local services and provider registration",
+    "homeDescription": "We are building the Ainevoie network for plumbing, electrical work, cleaning, renovations, transport, care and beauty. Register as a service provider.",
     "termsMetaTitle": "Terms & conditions | Ainevoie",
     "termsMetaDescription": "The rules for using the Ainevoie platform as a customer or provider.",
     "privacyMetaTitle": "Privacy policy | Ainevoie",
@@ -56,6 +56,7 @@
     "navPricing": "Plans",
     "navScreens": "Screenshots",
     "navTestimonials": "Reviews",
+    "navServices": "Services",
     "navFaq": "FAQ",
     "navContact": "Contact",
     "ctaProvider": "Become a provider",
@@ -627,7 +628,7 @@
     "benefit1": "A provider profile ready for activation.",
     "benefit2": "Access to relevant requests in your area and nearby places.",
     "benefit3": "Continue later in the app with the same email address and password.",
-    "timeNote": "The form takes about 60 seconds.",
+    "timeNote": "Activation follows profile completion and verification.",
     "previewRequests": "New service requests in the Ainevoie app",
     "previewCalendar": "The provider appointment calendar",
     "previewReviews": "Provider profile reviews",
@@ -661,7 +662,22 @@
     "phoneError": "Enter a valid phone number.",
     "passwordError": "Your password must contain at least 8 characters.",
     "passwordMismatchError": "The passwords do not match.",
-    "genericError": "We could not create your account. Please try again."
+    "genericError": "We could not create your account. Please try again.",
+    "servicePlaceholder": "Choose your service",
+    "serviceUnavailable": "The selected category is not open for registration yet. You can choose one of the available services below.",
+    "legalStatus": "Professional status",
+    "legalStatusPlaceholder": "Choose your status",
+    "legalStatuses": {
+      "pfa_ready": "I have a registered sole proprietorship",
+      "srl_ready": "I have a registered company",
+      "in_progress": "Registration in progress",
+      "need_guidance": "I need guidance"
+    },
+    "companyName": "Business name",
+    "cui": "Business tax ID",
+    "setupTimeline": "When do you expect to register?",
+    "companyRequired": "Enter your business name and tax ID.",
+    "timelineRequired": "Enter your expected registration timeline."
   },
   "QuickProviderSignupSuccess": {
     "badge": "Account created successfully",

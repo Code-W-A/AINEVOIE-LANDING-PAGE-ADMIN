@@ -1,0 +1,100 @@
+[
+  {
+    "value": "Instalator",
+    "labels": {
+      "ro": "Instalator",
+      "en": "Plumber"
+    },
+    "descriptions": {
+      "ro": "Țevi, calorifere, boiler, desfundări",
+      "en": "Pipes, radiators, boilers, drain clearing"
+    },
+    "icon": "Wrench",
+    "enabled": true,
+    "sortOrder": 10
+  },
+  {
+    "value": "Electrician",
+    "labels": {
+      "ro": "Electrician",
+      "en": "Electrician"
+    },
+    "descriptions": {
+      "ro": "Prize, tablou electric, corpuri de iluminat",
+      "en": "Sockets, electrical panels, lighting"
+    },
+    "icon": "Zap",
+    "enabled": true,
+    "sortOrder": 20
+  },
+  {
+    "value": "Curatenie menaj",
+    "labels": {
+      "ro": "Curățenie / menaj",
+      "en": "Cleaning / housekeeping"
+    },
+    "descriptions": {
+      "ro": "Casă, birouri, după renovare",
+      "en": "Homes, offices, after renovation"
+    },
+    "icon": "Sparkles",
+    "enabled": true,
+    "sortOrder": 30
+  },
+  {
+    "value": "Renovari meseriasi",
+    "labels": {
+      "ro": "Renovări și meseriași",
+      "en": "Renovation and trades"
+    },
+    "descriptions": {
+      "ro": "Zugrăveli, gresie și faianță, montaj mobilă",
+      "en": "Painting, tiling, furniture assembly"
+    },
+    "icon": "Hammer",
+    "enabled": true,
+    "sortOrder": 40
+  },
+  {
+    "value": "Mutari transport",
+    "labels": {
+      "ro": "Mutări și transport",
+      "en": "Moving and transport"
+    },
+    "descriptions": {
+      "ro": "Transport marfă, mobilă, dubă cu hamali",
+      "en": "Goods, furniture, vans with movers"
+    },
+    "icon": "Truck",
+    "enabled": true,
+    "sortOrder": 50
+  },
+  {
+    "value": "Bone ingrijire persoane",
+    "labels": {
+      "ro": "Bone și îngrijire persoane",
+      "en": "Childcare and personal care"
+    },
+    "descriptions": {
+      "ro": "Pe oră, permanentă, după școală",
+      "en": "Hourly, ongoing, after school"
+    },
+    "icon": "HeartHandshake",
+    "enabled": true,
+    "sortOrder": 60
+  },
+  {
+    "value": "Beauty",
+    "labels": {
+      "ro": "Beauty",
+      "en": "Beauty"
+    },
+    "descriptions": {
+      "ro": "Coafor, manichiură, frizerie, la domiciliu sau în salon",
+      "en": "Hair, nails, barbering, at home or in a salon"
+    },
+    "icon": "Scissors",
+    "enabled": true,
+    "sortOrder": 70
+  }
+]

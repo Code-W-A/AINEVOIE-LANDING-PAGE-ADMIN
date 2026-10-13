@@ -4,6 +4,12 @@ import {
   trackMetaCustomEvent,
   trackMetaStandardEvent,
 } from "@/components/analytics/MetaPixel";
+import { saveProviderMetaConsentToken } from "@/lib/metaMeasurementConsent";
+import { sanitizeProviderCampaignAttribution } from "@/lib/providerAcquisition";
+import {
+  PROVIDER_LEGAL_STATUSES,
+  type ProviderLegalStatus,
+} from "@/types/provider";
 import { Link, useRouter } from "@/i18n/navigation";
 import {
   getDefaultProviderServiceTypeItems,
@@ -27,6 +33,7 @@ type CityOption = {
 type QuickProviderSignupFormProps = {
   counties: readonly { code: string; name: string }[];
   cities: CityOption[];
+  initialService?: string;
 };
 
 type ApiResponse = {
@@ -34,6 +41,7 @@ type ApiResponse = {
   status?: string;
   uid?: string;
   metaLeadEventId?: string;
+  metaConsentToken?: string;
   appClickToken?: string;
 };
 
@@ -43,6 +51,7 @@ const ORADEA_CITY_CODE = "26564";
 export default function QuickProviderSignupForm({
   counties,
   cities,
+  initialService,
 }: QuickProviderSignupFormProps) {
   const locale = useLocale() as "ro" | "en";
   const t = useTranslations("QuickProviderSignup");
@@ -61,9 +70,11 @@ export default function QuickProviderSignupForm({
       ? ORADEA_CITY_CODE
       : "",
   );
-  const [serviceType, setServiceType] = useState(
-    FALLBACK_SERVICE_TYPES[0]?.value || "",
-  );
+  const [serviceType, setServiceType] = useState("");
+  const [legalStatus, setLegalStatus] = useState<ProviderLegalStatus | "">("");
+  const [companyName, setCompanyName] = useState("");
+  const [cui, setCui] = useState("");
+  const [estimatedSetupTimeline, setEstimatedSetupTimeline] = useState("");
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [newsletterOptIn, setNewsletterOptIn] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -88,14 +99,6 @@ export default function QuickProviderSignupForm({
   }
 
   useEffect(() => {
-    trackMetaCustomEvent(
-      "ProviderQuickSignupStarted",
-      "provider-quick-signup-started:" + locale,
-      { content_name: "Provider quick signup", locale },
-    );
-  }, [locale]);
-
-  useEffect(() => {
     let active = true;
 
     async function loadServiceTypes() {
@@ -108,12 +111,14 @@ export default function QuickProviderSignupForm({
         const items = Array.isArray(data?.item?.items)
           ? (data.item.items as ProviderServiceTypeItem[])
           : [];
-        if (!active || !items.length) return;
+        if (!active) return;
+        if (!items.length) {
+          setServiceTypes([]);
+          return;
+        }
         setServiceTypes(items);
         setServiceType((current) =>
-          items.some((item) => item.value === current)
-            ? current
-            : items[0].value,
+          items.some((item) => item.value === current) ? current : "",
         );
       } catch {
         // The built-in service list remains available if the request fails.
@@ -125,6 +130,15 @@ export default function QuickProviderSignupForm({
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (
+      initialService &&
+      serviceTypes.some((item) => item.value === initialService)
+    ) {
+      setServiceType((current) => current || initialService);
+    }
+  }, [initialService, serviceTypes]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -138,9 +152,21 @@ export default function QuickProviderSignupForm({
       !countyCode ||
       !cityCode ||
       !serviceType ||
+      !legalStatus ||
       !acceptTerms
     ) {
       setError(t("requiredError"));
+      return;
+    }
+    if (
+      (legalStatus === "pfa_ready" || legalStatus === "srl_ready") &&
+      (!companyName.trim() || !cui.trim())
+    ) {
+      setError(t("companyRequired"));
+      return;
+    }
+    if (legalStatus === "in_progress" && !estimatedSetupTimeline.trim()) {
+      setError(t("timelineRequired"));
       return;
     }
     if (!cityOptions.some((city) => city.code === cityCode)) {
@@ -177,7 +203,13 @@ export default function QuickProviderSignupForm({
           countyCode,
           email: email.trim(),
           fullName: fullName.trim(),
-          legalStatus: "need_guidance",
+          legalStatus,
+          companyName: companyName.trim(),
+          cui: cui.trim(),
+          estimatedSetupTimeline: estimatedSetupTimeline.trim(),
+          campaignAttribution: sanitizeProviderCampaignAttribution(
+            Object.fromEntries(new URLSearchParams(window.location.search)),
+          ),
           locale,
           newsletterOptIn,
           launchContactConsent: false,
@@ -204,6 +236,7 @@ export default function QuickProviderSignupForm({
         },
         data.metaLeadEventId,
       );
+      saveProviderMetaConsentToken(data.metaConsentToken);
       saveProviderAppClickToken(data.appClickToken);
       router.push("/providers/quick-signup/success");
     } catch (submitError) {
@@ -255,6 +288,13 @@ export default function QuickProviderSignupForm({
 
       <form
         onSubmit={handleSubmit}
+        onFocusCapture={() =>
+          trackMetaCustomEvent(
+            "ProviderQuickSignupStarted",
+            "provider-quick-signup-started:" + locale,
+            { content_name: "Provider quick signup", locale },
+          )
+        }
         className="shadow-card dark:bg-dark dark:shadow-card-dark rounded-2xl bg-white p-6 sm:p-8"
       >
         <div className="mb-7 flex items-start gap-3">
@@ -365,6 +405,9 @@ export default function QuickProviderSignupForm({
             <span className="mb-2 block text-sm font-medium text-black dark:text-white">
               {t("service")}
             </span>
+            {initialService && !serviceTypes.some((item) => item.value === initialService) && (
+              <span className="mb-2 block text-sm text-body-color" role="status">{t("serviceUnavailable")}</span>
+            )}
             <select
               value={serviceType}
               onChange={(event) => setServiceType(event.target.value)}
@@ -372,6 +415,7 @@ export default function QuickProviderSignupForm({
               disabled={submitting}
               required
             >
+              <option value="">{t("servicePlaceholder")}</option>
               {serviceOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -379,6 +423,75 @@ export default function QuickProviderSignupForm({
               ))}
             </select>
           </label>
+
+          <label>
+            <span className="mb-2 block text-sm font-medium text-black dark:text-white">
+              {t("legalStatus")}
+            </span>
+            <select
+              value={legalStatus}
+              onChange={(event) =>
+                setLegalStatus(event.target.value as ProviderLegalStatus)
+              }
+              disabled={submitting}
+              required
+              className="border-stroke dark:border-stroke-dark w-full rounded-md border bg-transparent px-4 py-3"
+            >
+              <option value="">{t("legalStatusPlaceholder")}</option>
+              {PROVIDER_LEGAL_STATUSES.map((value) => (
+                <option key={value} value={value}>
+                  {t(`legalStatuses.${value}`)}
+                </option>
+              ))}
+            </select>
+          </label>
+          {(legalStatus === "pfa_ready" || legalStatus === "srl_ready") && (
+            <>
+              <label>
+                <span className="mb-2 block text-sm font-medium text-black dark:text-white">
+                  {t("companyName")}
+                </span>
+                <input
+                  value={companyName}
+                  onChange={(event) => setCompanyName(event.target.value)}
+                  required
+                  disabled={submitting}
+                  maxLength={200}
+                  className="border-stroke dark:border-stroke-dark w-full rounded-md border bg-transparent px-4 py-3"
+                />
+              </label>
+              <label>
+                <span className="mb-2 block text-sm font-medium text-black dark:text-white">
+                  {t("cui")}
+                </span>
+                <input
+                  value={cui}
+                  onChange={(event) => setCui(event.target.value)}
+                  required
+                  disabled={submitting}
+                  maxLength={40}
+                  className="border-stroke dark:border-stroke-dark w-full rounded-md border bg-transparent px-4 py-3"
+                />
+              </label>
+            </>
+          )}
+          {legalStatus === "in_progress" && (
+            <label>
+              <span className="mb-2 block text-sm font-medium text-black dark:text-white">
+                {t("setupTimeline")}
+              </span>
+              <input
+                value={estimatedSetupTimeline}
+                onChange={(event) =>
+                  setEstimatedSetupTimeline(event.target.value)
+                }
+                required
+                disabled={submitting}
+                maxLength={200}
+                className="border-stroke dark:border-stroke-dark w-full rounded-md border bg-transparent px-4 py-3"
+              />
+            </label>
+          )}
 
           <label>
             <span className="mb-2 block text-sm font-medium text-black dark:text-white">

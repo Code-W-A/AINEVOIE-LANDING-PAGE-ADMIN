@@ -9,7 +9,7 @@ const hash = (value: string) =>
   createHash("sha256").update(value).digest("hex");
 const input = (headers = {}) => ({
   request: new Request("https://ai-nevoie.ro/api/providers/onboarding", {
-    headers,
+    headers: { cookie: "ainevoie_meta_consent=granted", ...headers },
   }),
   uid: "provider-123",
   email: " USER@example.com ",
@@ -41,7 +41,7 @@ describe("server Lead delivery", () => {
     );
     const eventId = scheduleProviderLead(
       input({
-        cookie: "_fbp=fb.1.123.456; _fbc=fb.1.123.click-id; session=private",
+        cookie: "ainevoie_meta_consent=granted; _fbp=fb.1.123.456; _fbc=fb.1.123.click-id; session=private",
         "user-agent": "test browser",
       }),
     );
@@ -54,7 +54,7 @@ describe("server Lead delivery", () => {
       event_id: eventId,
       event_name: "Lead",
       action_source: "website",
-      event_source_url: "https://ai-nevoie.ro/ro/providers/quick-signup",
+      event_source_url: "https://www.ai-nevoie.ro/providers/quick-signup",
       user_data: {
         em: [hash("user@example.com")],
         ph: [hash("40700000000")],
@@ -79,6 +79,11 @@ describe("server Lead delivery", () => {
     expect(mocks.after).not.toHaveBeenCalled();
   });
 
+  it("does not send without explicit measurement consent", () => {
+    scheduleProviderLead(input({ cookie: "ainevoie_meta_consent=denied" }));
+    expect(mocks.after).not.toHaveBeenCalled();
+  });
+
   it("does not send live events from previews", () => {
     vi.stubEnv("VERCEL_ENV", "preview");
     scheduleProviderLead(input());
@@ -91,7 +96,7 @@ describe("server Lead delivery", () => {
     fetchMock.mockResolvedValue(
       new Response(JSON.stringify({ events_received: 1 })),
     );
-    scheduleProviderLead(input({ cookie: "_fbc=malformed" }));
+    scheduleProviderLead(input({ cookie: "ainevoie_meta_consent=granted; _fbc=malformed" }));
     await mocks.after.mock.calls[0][0]();
     const payload = JSON.parse(fetchMock.mock.calls[0][1].body);
     expect(payload.test_event_code).toBe("TEST123");

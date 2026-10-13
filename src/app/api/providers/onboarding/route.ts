@@ -5,7 +5,9 @@ import { type AppLocale, getRequestLocale } from "@/lib/apiLocale";
 import { getApiErrorMessage } from "@/lib/apiMessages";
 import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
 import { captureServerException } from "@/lib/sentryServer";
-import { scheduleProviderLead } from "@/lib/metaConversions";
+import { hasServerMetaMeasurementConsent, sanitizeProviderCampaignAttribution } from "@/lib/providerAcquisition";
+import { hash, readMetaCookie, scheduleProviderLead } from "@/lib/metaConversions";
+import { createProviderMetaConsentToken } from "@/lib/providerMetaConsentToken";
 import { createProviderAppClickToken } from "@/lib/providerAppClickToken";
 import {
   PROVIDER_LAUNCH_CONTACT_CONSENT_VERSION,
@@ -52,6 +54,7 @@ type OnboardingPayload = {
   acceptTerms?: boolean;
   locale?: string;
   metaTrackingVersion?: unknown;
+  campaignAttribution?: unknown;
 };
 
 const MIN_PASSWORD_LENGTH = 8;
@@ -360,6 +363,7 @@ export async function POST(request: Request) {
       newsletterError,
     });
 
+    const metaConsentToken = isQuickSignup ? createProviderMetaConsentToken(userRecord.uid) : undefined;
     await db.collection("providers").doc(userRecord.uid).set({
       // Canonical provider document model aligned with docs/AInevoie-Firebase-Document-Model-Schema.md
       uid: userRecord.uid,
@@ -461,7 +465,25 @@ export async function POST(request: Request) {
         PROVIDER_LAUNCH_CONTACT_CONSENT_VERSION
       : null,
       onboardingStatus: "pre_registered",
-      source: "landing_onboarding",
+      source: isQuickSignup ? "provider_quick_signup" : "landing_onboarding",
+      ...(isQuickSignup ? {
+        campaignAttribution: sanitizeProviderCampaignAttribution(body.campaignAttribution),
+        metaAcquisition: {
+          version: "provider-acquisition-v1",
+          measurementConsent: hasServerMetaMeasurementConsent(request),
+          lifecycleMeasurementConsent: Boolean(metaConsentToken),
+          consentRecordedAt: FieldValue.serverTimestamp(),
+          ...(hasServerMetaMeasurementConsent(request) ? {
+            userData: {
+              em: [hash(email)],
+              ph: [hash(phone.replace(/\D/g, ""))],
+              external_id: [hash(userRecord.uid)],
+              ...(readMetaCookie(request, "_fbp") ? { fbp: readMetaCookie(request, "_fbp") } : {}),
+              ...(readMetaCookie(request, "_fbc") ? { fbc: readMetaCookie(request, "_fbc") } : {}),
+            },
+          } : {}),
+        },
+      } : {}),
       welcomeEmailSent: false,
       welcomeEmailError: null,
       createdAt: FieldValue.serverTimestamp(),
@@ -509,6 +531,7 @@ export async function POST(request: Request) {
       uid: userRecord.uid,
       ...(isQuickSignup ? { appClickToken: createProviderAppClickToken(userRecord.uid) } : {}),
       ...(metaLeadEventId ? { metaLeadEventId } : {}),
+      ...(metaConsentToken ? { metaConsentToken } : {}),
       welcomeEmailSent: false,
       newsletterStatusAtSignup,
     });

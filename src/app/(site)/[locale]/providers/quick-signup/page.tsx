@@ -8,14 +8,14 @@ import type { Metadata } from "next";
 import { setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 
-type PageProps = { params: Promise<{ locale: string }> };
+type PageProps = { params: Promise<{ locale: string }>; searchParams: Promise<{ service?: string }> };
 
 export const metadata: Metadata = {
   robots: { follow: false, index: false },
 };
 
-export default async function QuickProviderSignupPage({ params }: PageProps) {
-  const { locale } = await params;
+export default async function QuickProviderSignupPage({ params, searchParams }: PageProps) {
+  const [{ locale }, { service }] = await Promise.all([params, searchParams]);
   if (!routing.locales.includes(locale as (typeof routing.locales)[number])) {
     notFound();
   }
@@ -30,7 +30,7 @@ export default async function QuickProviderSignupPage({ params }: PageProps) {
   return (
     <main className="pt-[140px] pb-20 sm:pt-[160px] sm:pb-24">
       <section className="container max-w-[1180px]">
-        <QuickProviderSignupForm counties={ROMANIA_COUNTIES} cities={cities} />
+        <QuickProviderSignupForm counties={ROMANIA_COUNTIES} cities={cities} initialService={service} />
       </section>
     </main>
   );

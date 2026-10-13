@@ -2,6 +2,8 @@
 
 import Script from "next/script";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { hasMetaMeasurementConsent, useMetaMeasurementConsent } from "@/lib/metaMeasurementConsent";
 
 const META_PIXEL_ID =
   process.env.NEXT_PUBLIC_META_PIXEL_ID?.match(/^\d+$/)?.[0] ?? null;
@@ -48,7 +50,7 @@ function sendMetaEvent(
   attempt = 0,
   eventId?: string,
 ) {
-  if (wasMetaEventSent(dedupeKey)) return;
+  if (!hasMetaMeasurementConsent() || wasMetaEventSent(dedupeKey)) return;
 
   if (typeof window.fbq === "function") {
     try {
@@ -93,10 +95,18 @@ export function trackMetaCustomEvent(
 
 export default function MetaPixel() {
   const pathname = usePathname();
+  const consent = useMetaMeasurementConsent();
+  const [ready, setReady] = useState(false);
+  const enabled = consent === "granted" && Boolean(META_PIXEL_ID);
 
-  if (!META_PIXEL_ID) return null;
-  if (pathname?.includes("/providers/onboarding")) return null;
+  useEffect(() => {
+    if (enabled && ready && pathname) {
+      window.fbq?.("consent", "grant");
+      window.fbq?.("track", "PageView");
+    }
+  }, [enabled, ready, pathname]);
 
+  if (!enabled) return null;
   const pixelCode = `
     !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
     n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
@@ -104,24 +114,6 @@ export default function MetaPixel() {
     t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)
     }(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
     fbq('init', '${META_PIXEL_ID}');
-    fbq('track', 'PageView');
   `;
-
-  return (
-    <>
-      <Script id="meta-pixel" strategy="afterInteractive">
-        {pixelCode}
-      </Script>
-      <noscript>
-        {/* eslint-disable-next-line @next/next/no-img-element -- Meta requires a raw tracking pixel. */}
-        <img
-          height="1"
-          width="1"
-          style={{ display: "none" }}
-          src={`https://www.facebook.com/tr?id=${META_PIXEL_ID}&ev=PageView&noscript=1`}
-          alt=""
-        />
-      </noscript>
-    </>
-  );
+  return <Script id="meta-pixel" strategy="afterInteractive" onReady={() => setReady(true)}>{pixelCode}</Script>;
 }

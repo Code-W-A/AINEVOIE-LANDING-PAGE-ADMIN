@@ -21,7 +21,7 @@ const Header = () => {
       { label: t("navWork"), route: "/#work-process" },
       // Pricing is temporarily hidden until plan details are ready to publish.
       { label: t("navScreens"), route: "/#screens" },
-      { label: t("navTestimonials"), route: "/#testimonials" },
+      { label: t("navServices"), route: "/#services" },
       { label: t("navFaq"), route: "/#faq" },
       { label: t("navContact"), route: "/#support" },
     ],

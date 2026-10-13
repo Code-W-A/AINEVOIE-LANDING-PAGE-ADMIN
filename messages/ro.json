@@ -1,7 +1,7 @@
 {
   "Metadata": {
-    "homeTitle": "Ainevoie — conectează rapid clienții cu firme de curățenie",
-    "homeDescription": "Ainevoie este o platformă care conectează persoane și companii cu firme de curățenie: cauți, compari, programezi și plătești simplu, direct din aplicație.",
+    "homeTitle": "Ainevoie — servicii locale și înscrieri pentru prestatori",
+    "homeDescription": "Construim rețeaua Ainevoie pentru servicii locale: instalatori, electricieni, curățenie, renovări, transport, îngrijire și beauty. Înscrie-te ca prestator.",
     "termsMetaTitle": "Termeni și condiții | Ainevoie",
     "termsMetaDescription": "Condițiile de utilizare a platformei Ainevoie pentru clienți și furnizori.",
     "privacyMetaTitle": "Politica de confidențialitate | Ainevoie",
@@ -56,6 +56,7 @@
     "navPricing": "Planuri",
     "navScreens": "Capturi",
     "navTestimonials": "Recenzii",
+    "navServices": "Servicii",
     "navFaq": "Întrebări",
     "navContact": "Contact",
     "ctaProvider": "Devino prestator",
@@ -627,7 +628,7 @@
     "benefit1": "Profil de prestator pregătit pentru activare.",
     "benefit2": "Acces la cereri relevante din localitatea ta și împrejurimi.",
     "benefit3": "Continui ulterior din aplicație, cu același email și aceeași parolă.",
-    "timeNote": "Formularul durează aproximativ 60 de secunde.",
+    "timeNote": "Activarea are loc după completarea profilului și verificare.",
     "previewRequests": "Cereri noi de servicii în aplicația Ainevoie",
     "previewCalendar": "Calendarul programărilor prestatorului",
     "previewReviews": "Recenziile profilului de prestator",
@@ -661,7 +662,22 @@
     "phoneError": "Introdu un număr de telefon valid.",
     "passwordError": "Parola trebuie să aibă minimum 8 caractere.",
     "passwordMismatchError": "Parolele nu coincid.",
-    "genericError": "Nu am putut crea contul. Încearcă din nou."
+    "genericError": "Nu am putut crea contul. Încearcă din nou.",
+    "servicePlaceholder": "Alege serviciul oferit",
+    "serviceUnavailable": "Categoria aleasă nu este încă deschisă pentru înscrieri. Poți alege unul dintre serviciile disponibile mai jos.",
+    "legalStatus": "Situația profesională",
+    "legalStatusPlaceholder": "Alege situația ta",
+    "legalStatuses": {
+      "pfa_ready": "Am PFA",
+      "srl_ready": "Am SRL",
+      "in_progress": "Sunt în curs de înființare",
+      "need_guidance": "Am nevoie de ghidaj"
+    },
+    "companyName": "Denumire PFA / firmă",
+    "cui": "CUI",
+    "setupTimeline": "Când estimezi înființarea?",
+    "companyRequired": "Completează denumirea și CUI-ul.",
+    "timelineRequired": "Precizează când estimezi înființarea."
   },
   "QuickProviderSignupSuccess": {
     "badge": "Cont creat cu succes",

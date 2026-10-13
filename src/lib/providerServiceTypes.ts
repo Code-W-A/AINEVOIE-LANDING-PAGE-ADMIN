@@ -1,3 +1,5 @@
+import launchServices from "./launchServiceCatalog.json";
+
 export const PROVIDER_SERVICE_TYPES_COLLECTION = "admin_settings";
 export const PROVIDER_SERVICE_TYPES_DOC = "provider_service_types";
 
@@ -84,41 +86,42 @@ export function makeUniqueProviderServiceTypeValue(
 
 export function getDefaultProviderServiceTypeItems(): ProviderServiceTypeItem[] {
   return [
+    ...launchServices.map(({ value, labels, enabled, sortOrder }) => ({ value, labels, enabled, sortOrder })),
     {
       value: "Curatenie rezidentiala",
       labels: { ro: "Curățenie rezidențială", en: "Residential cleaning" },
       enabled: true,
-      sortOrder: 10,
+      sortOrder: 110,
     },
     {
       value: "Curatenie birouri",
       labels: { ro: "Curățenie birouri", en: "Office cleaning" },
       enabled: true,
-      sortOrder: 20,
+      sortOrder: 120,
     },
     {
       value: "Curatenie dupa renovare",
       labels: { ro: "Curățenie după renovare", en: "Post-renovation cleaning" },
       enabled: true,
-      sortOrder: 30,
+      sortOrder: 130,
     },
     {
       value: "Curatenie canapele",
       labels: { ro: "Curățenie canapele", en: "Upholstery cleaning" },
       enabled: true,
-      sortOrder: 40,
+      sortOrder: 140,
     },
     {
       value: "Curatenie geamuri",
       labels: { ro: "Curățenie geamuri", en: "Window cleaning" },
       enabled: true,
-      sortOrder: 50,
+      sortOrder: 150,
     },
     {
       value: "Curatenie industriala",
       labels: { ro: "Curățenie industrială", en: "Industrial cleaning" },
       enabled: true,
-      sortOrder: 60,
+      sortOrder: 160,
     },
   ];
 }

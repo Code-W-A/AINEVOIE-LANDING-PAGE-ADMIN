@@ -5,8 +5,8 @@ import Cta from "@/components/Cta";
 import Faq from "@/components/Faq";
 import Features from "@/components/Features";
 import HeroArea from "@/components/HeroArea";
+import LaunchServices from "@/components/LaunchServices";
 import Screens from "@/components/Screens";
-import Testimonials from "@/components/Testimonials";
 import WorkProcess from "@/components/WorkProcess";
 import { routing } from "@/i18n/routing";
 import { buildLocalePageMetadata } from "@/lib/seo";
@@ -36,13 +36,13 @@ export default function Home() {
   return (
     <main>
       <HeroArea />
+      <LaunchServices />
       <Features />
       <About />
       <WorkProcess />
       {/* Pricing is temporarily hidden until plan details are ready to publish. */}
       <Screens />
       <Cta />
-      <Testimonials />
       <Faq />
       {integrations.isSanityEnabled && <Blog />}
       <Contact />

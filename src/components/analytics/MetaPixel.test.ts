@@ -8,6 +8,8 @@ describe("Meta browser Lead", () => {
     vi.resetAllMocks();
     vi.useFakeTimers();
     stored = new Map();
+    vi.stubGlobal("document", { cookie: "ainevoie_meta_consent=granted" });
+    vi.stubGlobal("navigator", { doNotTrack: "0" });
     vi.stubGlobal("window", {
       fbq,
       setTimeout,
@@ -20,6 +22,13 @@ describe("Meta browser Lead", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.unstubAllGlobals();
+  });
+
+  it("does not queue a Lead after consent is refused", () => {
+    document.cookie = "ainevoie_meta_consent=denied";
+    trackMetaStandardEvent("Lead", "lead-key", {}, "shared-id");
+    expect(fbq).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it("passes the server ID in Meta's deduplication options only once", () => {
