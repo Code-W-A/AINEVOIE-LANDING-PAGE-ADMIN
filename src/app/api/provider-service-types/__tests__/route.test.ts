@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => {
 
   return {
     devLogServerError: vi.fn(),
+    get: vi.fn(),
     getDocData: () => docData,
     setDocData: (value: Record<string, unknown> | null) => {
       docData = value;
@@ -16,14 +17,13 @@ vi.mock("@/lib/firebaseAdmin", () => ({
   getAdminDb: () => ({
     collection: () => ({
       doc: () => ({
-        get: async () => ({
-          exists: Boolean(mocks.getDocData()),
-          data: () => mocks.getDocData(),
-        }),
+        get: mocks.get,
       }),
     }),
   }),
 }));
+
+vi.mock("@/lib/sentryServer", () => ({ captureServerException: vi.fn() }));
 
 vi.mock("@/lib/devServerErrorLog", () => ({
   devLogServerError: mocks.devLogServerError,
@@ -35,6 +35,10 @@ describe("public provider service types route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.setDocData(null);
+    mocks.get.mockImplementation(async () => ({
+      exists: Boolean(mocks.getDocData()),
+      data: () => mocks.getDocData(),
+    }));
   });
 
   it("returns default active provider service types when settings are missing", async () => {
@@ -44,8 +48,8 @@ describe("public provider service types route", () => {
     expect(response.status).toBe(200);
     expect(json.item.items.length).toBeGreaterThan(0);
     expect(json.item.items[0]).toMatchObject({
-      value: "Curatenie rezidentiala",
-      labels: expect.objectContaining({ ro: "Curățenie rezidențială" }),
+      value: "Instalator",
+      labels: expect.objectContaining({ ro: "Instalator" }),
     });
   });
 
@@ -78,5 +82,34 @@ describe("public provider service types route", () => {
         sortOrder: 20,
       },
     ]);
+  });
+  it("returns editable homepage fields with no-store caching", async () => {
+    mocks.setDocData({
+      items: [
+        {
+          value: "Beauty",
+          labels: { ro: "Beauty", en: "Beauty" },
+          descriptions: { ro: "Coafor", en: "Hair" },
+          icon: "Scissors",
+          sortOrder: 70,
+        },
+      ],
+    });
+    const response = await GET();
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect((await response.json()).item.items[0]).toMatchObject({
+      descriptions: { ro: "Coafor", en: "Hair" },
+      icon: "Scissors",
+    });
+  });
+
+  it("returns a retryable error instead of a static catalog when Firestore fails", async () => {
+    mocks.get.mockRejectedValueOnce(new Error("Firestore unavailable"));
+    const response = await GET();
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(await response.json()).toEqual({
+      error: "Nu am putut încărca serviciile.",
+    });
   });
 });

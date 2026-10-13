@@ -36,12 +36,8 @@ export async function GET() {
     });
     devLogServerError("GET /api/provider-service-types", error);
     return NextResponse.json(
-      {
-        item: {
-          items: getPublicProviderServiceTypes(getDefaultProviderServiceTypeSettings()),
-        },
-      },
-      { status: 200 }
+      { error: "Nu am putut încărca serviciile." },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
     );
   }
 }

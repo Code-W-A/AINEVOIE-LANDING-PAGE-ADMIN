@@ -40,7 +40,7 @@ const validPayload = {
   legalStatus: "need_guidance",
   password: "Passw0rd!",
   phone: "+40700000000",
-  serviceType: "Curatenie birouri",
+  serviceType: "Instalator",
 };
 
 function request(body: Record<string, unknown>) {
@@ -418,7 +418,7 @@ describe("POST /api/providers/onboarding", () => {
           coverageAreaText: "România, București, Sector 6",
           displayName: "Provider Test",
           shortBio: "",
-          specialization: "Curatenie birouri",
+          specialization: "Instalator",
         },
         reviewState: {
           lastReviewedAt: null,

@@ -8,6 +8,7 @@ import {
   resolveProviderServiceTypeValue,
   sanitizeProviderServiceTypeSettings,
   validateProviderServiceTypeSettings,
+  prepareLaunchProviderServiceTypeSettings,
 } from "../providerServiceTypes";
 
 describe("providerServiceTypes", () => {
@@ -15,7 +16,10 @@ describe("providerServiceTypes", () => {
     const settings = sanitizeProviderServiceTypeSettings(null);
 
     expect(settings.items).toEqual(getDefaultProviderServiceTypeItems());
-    expect(isProviderServiceTypeValue("Curatenie birouri", settings)).toBe(true);
+    expect(isProviderServiceTypeValue("Curatenie birouri", settings)).toBe(
+      false,
+    );
+    expect(getPublicProviderServiceTypes(settings)).toHaveLength(7);
   });
 
   it("sanitizes settings, removes duplicate values, and derives missing labels", () => {
@@ -72,7 +76,9 @@ describe("providerServiceTypes", () => {
       },
     ]);
     expect(isProviderServiceTypeValue("Legacy", settings)).toBe(false);
-    expect(resolveProviderServiceTypeValue("instalatii", settings)).toBe("Instalatii");
+    expect(resolveProviderServiceTypeValue("instalatii", settings)).toBe(
+      "Instalatii",
+    );
   });
 
   it("requires at least one active item", () => {
@@ -87,13 +93,15 @@ describe("providerServiceTypes", () => {
       ],
     });
 
-    expect(validateProviderServiceTypeSettings(settings)).toBe("Păstrează cel puțin un tip de serviciu activ.");
+    expect(validateProviderServiceTypeSettings(settings)).toBe(
+      "Păstrează cel puțin un tip de serviciu activ.",
+    );
   });
 
   it("generates stable values from Romanian labels", () => {
-    expect(generateProviderServiceTypeValueFromLabel("Curățenie rezidențială")).toBe(
-      "Curatenie Rezidentiala"
-    );
+    expect(
+      generateProviderServiceTypeValueFromLabel("Curățenie rezidențială"),
+    ).toBe("Curatenie Rezidentiala");
   });
 
   it("makes auto-generated values unique with numeric suffixes", () => {
@@ -101,7 +109,61 @@ describe("providerServiceTypes", () => {
       makeUniqueProviderServiceTypeValue("Curatenie Rezidentiala", [
         "Curatenie Rezidentiala",
         "Curatenie Rezidentiala 2",
-      ])
+      ]),
     ).toBe("Curatenie Rezidentiala 3");
+  });
+  it("round trips descriptions and icons while sanitizing unsupported icons", () => {
+    const settings = sanitizeProviderServiceTypeSettings({
+      items: [
+        {
+          value: "Beauty",
+          labels: { ro: "Beauty", en: "Beauty" },
+          descriptions: { ro: " Coafor ", en: " Hair " },
+          icon: "Scissors",
+          sortOrder: 20,
+        },
+        {
+          value: "Other",
+          labels: { ro: "Altele", en: "Other" },
+          icon: "Unsupported",
+          sortOrder: 10,
+        },
+      ],
+    });
+    expect(getPublicProviderServiceTypes(settings)[1]).toMatchObject({
+      descriptions: { ro: "Coafor", en: "Hair" },
+      icon: "Scissors",
+    });
+    expect(settings.items[0]).not.toHaveProperty("icon");
+    expect(sanitizeProviderServiceTypeSettings(settings)).toEqual(settings);
+  });
+
+  it("prepares exactly seven active categories, preserves keys and is idempotent", () => {
+    const before = sanitizeProviderServiceTypeSettings({
+      items: [
+        {
+          value: "custom-plumber-key",
+          labels: { ro: "Instalator", en: "Plumber" },
+          enabled: false,
+        },
+        {
+          value: "Legacy",
+          labels: { ro: "Vechi", en: "Legacy" },
+          enabled: true,
+        },
+      ],
+    });
+    const prepared = prepareLaunchProviderServiceTypeSettings(before);
+    expect(getPublicProviderServiceTypes(prepared)).toHaveLength(7);
+    expect(prepared.items[0].value).toBe("custom-plumber-key");
+    expect(
+      prepared.items.find((item) => item.value === "Legacy")?.enabled,
+    ).toBe(false);
+    expect(before.items.find((item) => item.value === "Legacy")?.enabled).toBe(
+      true,
+    );
+    expect(prepareLaunchProviderServiceTypeSettings(prepared)).toEqual(
+      prepared,
+    );
   });
 });
