@@ -45,7 +45,7 @@ type ApiResponse = {
   appClickToken?: string;
 };
 
-const FALLBACK_SERVICE_TYPES = getDefaultProviderServiceTypeItems().filter((item) => item.enabled);
+const FALLBACK_SERVICE_TYPES = getDefaultProviderServiceTypeItems();
 const ORADEA_CITY_CODE = "26564";
 
 export default function QuickProviderSignupForm({
@@ -104,7 +104,6 @@ export default function QuickProviderSignupForm({
     async function loadServiceTypes() {
       try {
         const response = await fetch("/api/provider-service-types", {
-          cache: "no-store",
           headers: { Accept: "application/json" },
         });
         if (!response.ok) return;

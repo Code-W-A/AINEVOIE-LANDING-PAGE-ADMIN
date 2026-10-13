@@ -138,7 +138,7 @@ type AccountCreationResult = {
 
 const MAX_STEP = PROVIDER_ONBOARDING_MAX_STEP;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
-const DEFAULT_PROVIDER_SERVICE_TYPES = getDefaultProviderServiceTypeItems().filter((item) => item.enabled);
+const DEFAULT_PROVIDER_SERVICE_TYPES = getDefaultProviderServiceTypeItems();
 
 function emptyFileSlot(): FileSlot {
   return {
@@ -450,7 +450,6 @@ export default function ProviderOnboardingFormWizard({
     async function loadServiceTypes() {
       try {
         const response = await fetch("/api/provider-service-types", {
-          cache: "no-store",
           headers: { Accept: "application/json" },
         });
         if (!response.ok) {

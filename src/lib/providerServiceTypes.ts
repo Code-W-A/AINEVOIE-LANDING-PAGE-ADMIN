@@ -5,23 +5,9 @@ export const PROVIDER_SERVICE_TYPES_DOC = "provider_service_types";
 
 export type ProviderServiceTypeLocale = "ro" | "en";
 
-export const PROVIDER_SERVICE_TYPE_ICONS = [
-  "Wrench",
-  "Zap",
-  "Sparkles",
-  "Hammer",
-  "Truck",
-  "HeartHandshake",
-  "Scissors",
-] as const;
-export type ProviderServiceTypeIcon =
-  (typeof PROVIDER_SERVICE_TYPE_ICONS)[number];
-
 export type ProviderServiceTypeItem = {
   value: string;
   labels: Record<ProviderServiceTypeLocale, string>;
-  descriptions?: Record<ProviderServiceTypeLocale, string>;
-  icon?: ProviderServiceTypeIcon;
   enabled: boolean;
   sortOrder: number;
 };
@@ -72,13 +58,13 @@ export function generateProviderServiceTypeValueFromLabel(labelRo: string) {
 export function makeUniqueProviderServiceTypeValue(
   baseValue: string,
   existingValues: string[],
-  currentValue = "",
+  currentValue = ""
 ) {
   const normalizedCurrentValue = normalizeOption(currentValue);
   const taken = new Set(
     existingValues
       .map((value) => normalizeOption(value))
-      .filter((value) => value && value !== normalizedCurrentValue),
+      .filter((value) => value && value !== normalizedCurrentValue)
   );
   const initialValue = readString(baseValue, 120);
 
@@ -100,44 +86,41 @@ export function makeUniqueProviderServiceTypeValue(
 
 export function getDefaultProviderServiceTypeItems(): ProviderServiceTypeItem[] {
   return [
-    ...launchServices.map((item) => ({
-      ...item,
-      icon: item.icon as ProviderServiceTypeIcon,
-    })),
+    ...launchServices.map(({ value, labels, enabled, sortOrder }) => ({ value, labels, enabled, sortOrder })),
     {
       value: "Curatenie rezidentiala",
       labels: { ro: "Curățenie rezidențială", en: "Residential cleaning" },
-      enabled: false,
+      enabled: true,
       sortOrder: 110,
     },
     {
       value: "Curatenie birouri",
       labels: { ro: "Curățenie birouri", en: "Office cleaning" },
-      enabled: false,
+      enabled: true,
       sortOrder: 120,
     },
     {
       value: "Curatenie dupa renovare",
       labels: { ro: "Curățenie după renovare", en: "Post-renovation cleaning" },
-      enabled: false,
+      enabled: true,
       sortOrder: 130,
     },
     {
       value: "Curatenie canapele",
       labels: { ro: "Curățenie canapele", en: "Upholstery cleaning" },
-      enabled: false,
+      enabled: true,
       sortOrder: 140,
     },
     {
       value: "Curatenie geamuri",
       labels: { ro: "Curățenie geamuri", en: "Window cleaning" },
-      enabled: false,
+      enabled: true,
       sortOrder: 150,
     },
     {
       value: "Curatenie industriala",
       labels: { ro: "Curățenie industrială", en: "Industrial cleaning" },
-      enabled: false,
+      enabled: true,
       sortOrder: 160,
     },
   ];
@@ -147,24 +130,17 @@ export function getDefaultProviderServiceTypeSettings(): ProviderServiceTypeSett
   return { items: getDefaultProviderServiceTypeItems() };
 }
 
-export function sanitizeProviderServiceTypeSettings(
-  raw: unknown,
-): ProviderServiceTypeSettings {
-  const source =
-    raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+export function sanitizeProviderServiceTypeSettings(raw: unknown): ProviderServiceTypeSettings {
+  const source = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
   const rawItems = Array.isArray(source.items) ? source.items : [];
   const seen = new Set<string>();
   const items: ProviderServiceTypeItem[] = [];
 
   rawItems.slice(0, MAX_SERVICE_TYPES).forEach((rawItem, index) => {
-    const item =
-      rawItem && typeof rawItem === "object"
-        ? (rawItem as Record<string, unknown>)
-        : {};
-    const labelsSource =
-      item.labels && typeof item.labels === "object"
-        ? (item.labels as Record<string, unknown>)
-        : {};
+    const item = rawItem && typeof rawItem === "object" ? rawItem as Record<string, unknown> : {};
+    const labelsSource = item.labels && typeof item.labels === "object"
+      ? item.labels as Record<string, unknown>
+      : {};
     const value = readString(item.value, 120);
     const normalizedValue = normalizeOption(value);
 
@@ -177,53 +153,31 @@ export function sanitizeProviderServiceTypeSettings(
     const enLabel = readString(labelsSource.en, 120) || roLabel;
     const parsedSortOrder = Number(item.sortOrder);
 
-    const descriptionsSource =
-      item.descriptions && typeof item.descriptions === "object"
-        ? (item.descriptions as Record<string, unknown>)
-        : null;
-    const icon = PROVIDER_SERVICE_TYPE_ICONS.find((name) => name === item.icon);
-
     items.push({
       value,
       labels: {
         ro: roLabel,
         en: enLabel,
       },
-      ...(descriptionsSource
-        ? {
-            descriptions: {
-              ro: readString(descriptionsSource.ro, 500),
-              en: readString(descriptionsSource.en, 500),
-            },
-          }
-        : {}),
-      ...(icon ? { icon } : {}),
       enabled: item.enabled !== false,
-      sortOrder: Number.isFinite(parsedSortOrder)
-        ? Math.round(parsedSortOrder)
-        : (index + 1) * 10,
+      sortOrder: Number.isFinite(parsedSortOrder) ? Math.round(parsedSortOrder) : (index + 1) * 10,
     });
   });
 
   return {
-    items: items.length
-      ? sortProviderServiceTypeItems(items)
-      : getDefaultProviderServiceTypeItems(),
+    items: items.length ? sortProviderServiceTypeItems(items) : getDefaultProviderServiceTypeItems(),
   };
 }
 
 export function sortProviderServiceTypeItems(items: ProviderServiceTypeItem[]) {
-  return [...items].sort(
-    (a, b) =>
-      a.sortOrder - b.sortOrder ||
-      a.labels.ro.localeCompare(b.labels.ro, "ro") ||
-      a.value.localeCompare(b.value),
-  );
+  return [...items].sort((a, b) => (
+    a.sortOrder - b.sortOrder
+    || a.labels.ro.localeCompare(b.labels.ro, "ro")
+    || a.value.localeCompare(b.value)
+  ));
 }
 
-export function validateProviderServiceTypeSettings(
-  settings: ProviderServiceTypeSettings,
-) {
+export function validateProviderServiceTypeSettings(settings: ProviderServiceTypeSettings) {
   if (!settings.items.length) {
     return "Adaugă cel puțin un tip de serviciu.";
   }
@@ -250,64 +204,22 @@ export function validateProviderServiceTypeSettings(
   return null;
 }
 
-export function getPublicProviderServiceTypes(
-  settings: ProviderServiceTypeSettings,
-) {
+export function getPublicProviderServiceTypes(settings: ProviderServiceTypeSettings) {
   return sortProviderServiceTypeItems(settings.items)
     .filter((item) => item.enabled)
     .map((item) => ({
       value: item.value,
       labels: item.labels,
-      ...(item.descriptions ? { descriptions: item.descriptions } : {}),
-      ...(item.icon ? { icon: item.icon } : {}),
       sortOrder: item.sortOrder,
     }));
 }
 
-export function isProviderServiceTypeValue(
-  value: string,
-  settings: ProviderServiceTypeSettings,
-) {
+export function isProviderServiceTypeValue(value: string, settings: ProviderServiceTypeSettings) {
   const normalizedValue = normalizeOption(value);
-  return settings.items.some(
-    (item) => item.enabled && normalizeOption(item.value) === normalizedValue,
-  );
+  return settings.items.some((item) => item.enabled && normalizeOption(item.value) === normalizedValue);
 }
 
-export function resolveProviderServiceTypeValue(
-  value: string,
-  settings: ProviderServiceTypeSettings,
-) {
+export function resolveProviderServiceTypeValue(value: string, settings: ProviderServiceTypeSettings) {
   const normalizedValue = normalizeOption(value);
-  return (
-    settings.items.find(
-      (item) => item.enabled && normalizeOption(item.value) === normalizedValue,
-    )?.value || ""
-  );
-}
-
-// Build a reviewable admin draft. Existing profile keys remain unchanged.
-export function prepareLaunchProviderServiceTypeSettings(
-  settings: ProviderServiceTypeSettings,
-): ProviderServiceTypeSettings {
-  const remaining = [...settings.items];
-  const active = launchServices.map((service) => {
-    const index = remaining.findIndex(
-      (item) =>
-        normalizeOption(item.value) === normalizeOption(service.value) ||
-        normalizeOption(item.labels.ro) === normalizeOption(service.labels.ro),
-    );
-    const existing = index === -1 ? null : remaining.splice(index, 1)[0];
-    return {
-      ...service,
-      value: existing?.value || service.value,
-      icon: service.icon as ProviderServiceTypeIcon,
-    };
-  });
-  return {
-    items: [
-      ...active,
-      ...remaining.map((item) => ({ ...item, enabled: false })),
-    ],
-  };
+  return settings.items.find((item) => item.enabled && normalizeOption(item.value) === normalizedValue)?.value || "";
 }

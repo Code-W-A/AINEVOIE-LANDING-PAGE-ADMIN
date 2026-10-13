@@ -77,9 +77,7 @@ describe("admin provider service types route", () => {
       ],
     });
 
-    const response = await GET(
-      new Request("https://example.com/api/admin/provider-service-types"),
-    );
+    const response = await GET(new Request("https://example.com/api/admin/provider-service-types"));
     const json = await response.json();
 
     expect(response.status).toBe(200);
@@ -95,22 +93,20 @@ describe("admin provider service types route", () => {
   });
 
   it("persists sanitized settings on PUT", async () => {
-    const response = await PUT(
-      new Request("https://example.com/api/admin/provider-service-types", {
-        method: "PUT",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          items: [
-            {
-              value: " Instalatii ",
-              labels: { ro: " Instalații ", en: " Plumbing " },
-              enabled: true,
-              sortOrder: 10,
-            },
-          ],
-        }),
+    const response = await PUT(new Request("https://example.com/api/admin/provider-service-types", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        items: [
+          {
+            value: " Instalatii ",
+            labels: { ro: " Instalații ", en: " Plumbing " },
+            enabled: true,
+            sortOrder: 10,
+          },
+        ],
       }),
-    );
+    }));
     const json = await response.json();
 
     expect(response.status).toBe(200);
@@ -139,47 +135,23 @@ describe("admin provider service types route", () => {
   });
 
   it("rejects settings without an active service type", async () => {
-    const response = await PUT(
-      new Request("https://example.com/api/admin/provider-service-types", {
-        method: "PUT",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          items: [
-            {
-              value: "Legacy",
-              labels: { ro: "Legacy", en: "Legacy" },
-              enabled: false,
-              sortOrder: 10,
-            },
-          ],
-        }),
+    const response = await PUT(new Request("https://example.com/api/admin/provider-service-types", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        items: [
+          {
+            value: "Legacy",
+            labels: { ro: "Legacy", en: "Legacy" },
+            enabled: false,
+            sortOrder: 10,
+          },
+        ],
       }),
-    );
+    }));
     const json = await response.json();
 
     expect(response.status).toBe(400);
     expect(json.error).toBe("Păstrează cel puțin un tip de serviciu activ.");
-  });
-  it("persists and reloads public descriptions and icons", async () => {
-    const item = {
-      value: "Beauty",
-      labels: { ro: "Beauty", en: "Beauty" },
-      descriptions: { ro: "Coafor, manichiură", en: "Hair, nails" },
-      icon: "Scissors",
-      enabled: true,
-      sortOrder: 70,
-    };
-    const saved = await PUT(
-      new Request("https://example.com/api/admin/provider-service-types", {
-        method: "PUT",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ items: [item] }),
-      }),
-    );
-    expect(saved.status).toBe(200);
-    const loaded = await GET(
-      new Request("https://example.com/api/admin/provider-service-types"),
-    );
-    expect((await loaded.json()).item.items).toEqual([item]);
   });
 });

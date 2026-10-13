@@ -3,10 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Pencil, Plus, Search, Settings2 } from "lucide-react";
 
-import {
-  adminFetch,
-  readAdminResponseError,
-} from "@/components/admin/adminApi";
+import { adminFetch, readAdminResponseError } from "@/components/admin/adminApi";
 import { AdminFormGridSkeleton } from "@/components/admin/AdminSkeletonLayouts";
 import { useAdminData } from "@/components/admin/useAdminData";
 import { Badge } from "@/components/ui/badge";
@@ -31,9 +28,6 @@ import {
   ProviderServiceTypeItem,
   ProviderServiceTypeSettings,
   getDefaultProviderServiceTypeSettings,
-  prepareLaunchProviderServiceTypeSettings,
-  PROVIDER_SERVICE_TYPE_ICONS,
-  type ProviderServiceTypeIcon,
 } from "@/lib/providerServiceTypes";
 import {
   type ConfigListStatusFilter,
@@ -65,13 +59,12 @@ type ConfigListRegistryEntry = {
 };
 
 function cloneProviderServiceTypeSettings(
-  settings: ProviderServiceTypeSettings,
+  settings: ProviderServiceTypeSettings
 ): ProviderServiceTypeSettings {
   return {
     items: settings.items.map((item) => ({
       ...item,
       labels: { ...item.labels },
-      ...(item.descriptions ? { descriptions: { ...item.descriptions } } : {}),
     })),
   };
 }
@@ -86,20 +79,21 @@ const STATUS_FILTER_OPTIONS: Array<{
 ];
 
 export function AdminConfigListsPanel() {
-  const { data, loading, error, reload } =
-    useAdminData<ProviderServiceTypesResponse>(
-      "/api/admin/provider-service-types",
-    );
+  const {
+    data,
+    loading,
+    error,
+    reload,
+  } = useAdminData<ProviderServiceTypesResponse>("/api/admin/provider-service-types");
   const [savedState, setSavedState] = useState<ProviderServiceTypeSettings>(
-    getDefaultProviderServiceTypeSettings(),
+    getDefaultProviderServiceTypeSettings()
   );
   const [draftState, setDraftState] = useState<ProviderServiceTypeSettings>(
-    getDefaultProviderServiceTypeSettings(),
+    getDefaultProviderServiceTypeSettings()
   );
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
-  const [statusFilter, setStatusFilter] =
-    useState<ConfigListStatusFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<ConfigListStatusFilter>("all");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveOk, setSaveOk] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -117,47 +111,40 @@ export function AdminConfigListsPanel() {
     }
   }, [data]);
 
-  const registryEntries = useMemo<ConfigListRegistryEntry[]>(
-    () => [
-      {
-        key: "provider-service-types",
-        title: "Tipuri servicii provider",
-        description:
-          "Lista afișată pe prima pagină și folosită la înscrierea prestatorilor.",
-        activeCount: countActiveProviderServiceTypeItems(savedState),
-        totalCount: savedState.items.length,
-      },
-    ],
-    [savedState],
-  );
+  const registryEntries = useMemo<ConfigListRegistryEntry[]>(() => [
+    {
+      key: "provider-service-types",
+      title: "Tipuri servicii provider",
+      description:
+        "Lista folosită în onboarding-ul public și în aplicația mobilă.",
+      activeCount: countActiveProviderServiceTypeItems(savedState),
+      totalCount: savedState.items.length,
+    },
+  ], [savedState]);
 
   const filteredItems = useMemo(
-    () =>
-      draftState.items
-        .map((item, index) => ({ item, index }))
-        .filter(
-          ({ item }) =>
-            filterProviderServiceTypeItems([item], searchValue, statusFilter)
-              .length > 0,
-        ),
-    [draftState.items, searchValue, statusFilter],
+    () => draftState.items
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => (
+        filterProviderServiceTypeItems([item], searchValue, statusFilter).length > 0
+      )),
+    [draftState.items, searchValue, statusFilter]
   );
   const draftActiveCount = useMemo(
     () => countActiveProviderServiceTypeItems(draftState),
-    [draftState],
+    [draftState]
   );
   const duplicateWarnings = useMemo(
-    () =>
-      getProviderServiceTypeDuplicateWarnings(
-        draftState.items,
-        editorState.draft,
-        editorState.index,
-      ),
-    [draftState.items, editorState.draft, editorState.index],
+    () => getProviderServiceTypeDuplicateWarnings(
+      draftState.items,
+      editorState.draft,
+      editorState.index
+    ),
+    [draftState.items, editorState.draft, editorState.index]
   );
   const hasUnsavedChanges = useMemo(
     () => JSON.stringify(draftState) !== JSON.stringify(savedState),
-    [draftState, savedState],
+    [draftState, savedState]
   );
 
   function resetDrawerState(baseState = savedState) {
@@ -169,9 +156,7 @@ export function AdminConfigListsPanel() {
     setEditorState({
       mode: "list",
       index: null,
-      draft: createEmptyProviderServiceTypeItem(
-        (baseState.items.length + 1) * 10,
-      ),
+      draft: createEmptyProviderServiceTypeItem((baseState.items.length + 1) * 10),
     });
   }
 
@@ -191,9 +176,7 @@ export function AdminConfigListsPanel() {
     setEditorState({
       mode: "edit",
       index: null,
-      draft: createEmptyProviderServiceTypeItem(
-        (draftState.items.length + 1) * 10,
-      ),
+      draft: createEmptyProviderServiceTypeItem((draftState.items.length + 1) * 10),
     });
     setSaveOk(false);
   }
@@ -220,18 +203,13 @@ export function AdminConfigListsPanel() {
     setEditorState({
       mode: "list",
       index: null,
-      draft: createEmptyProviderServiceTypeItem(
-        (draftState.items.length + 1) * 10,
-      ),
+      draft: createEmptyProviderServiceTypeItem((draftState.items.length + 1) * 10),
     });
   }
 
   function updateDraftItem(
-    field: keyof Pick<
-      ProviderServiceTypeItem,
-      "value" | "enabled" | "sortOrder" | "icon"
-    >,
-    value: string | number | boolean,
+    field: keyof Pick<ProviderServiceTypeItem, "value" | "enabled" | "sortOrder">,
+    value: string | number | boolean
   ) {
     setEditorState((prev) => ({
       ...prev,
@@ -255,24 +233,10 @@ export function AdminConfigListsPanel() {
     }));
   }
 
-  function updateDraftDescription(locale: "ro" | "en", value: string) {
-    setEditorState((prev) => ({
-      ...prev,
-      draft: {
-        ...prev.draft,
-        descriptions: {
-          ro: prev.draft.descriptions?.ro || "",
-          en: prev.draft.descriptions?.en || "",
-          [locale]: value,
-        },
-      },
-    }));
-  }
-
   function saveEditorDraft() {
-    setDraftState((prev) =>
-      upsertProviderServiceTypeItem(prev, editorState.draft, editorState.index),
-    );
+    setDraftState((prev) => (
+      upsertProviderServiceTypeItem(prev, editorState.draft, editorState.index)
+    ));
     setSaveError(null);
     setSaveOk(false);
     closeEditor();
@@ -280,9 +244,9 @@ export function AdminConfigListsPanel() {
 
   function updateItemEnabled(index: number, enabled: boolean) {
     setDraftState((prev) => ({
-      items: prev.items.map((item, itemIndex) =>
-        itemIndex === index ? { ...item, enabled } : item,
-      ),
+      items: prev.items.map((item, itemIndex) => (
+        itemIndex === index ? { ...item, enabled } : item
+      )),
     }));
     setSaveError(null);
     setSaveOk(false);
@@ -302,14 +266,14 @@ export function AdminConfigListsPanel() {
         throw new Error(
           await readAdminResponseError(
             res,
-            "Nu am putut salva tipurile de servicii.",
-          ),
+            "Nu am putut salva tipurile de servicii."
+          )
         );
       }
 
       const json = await res.json();
       const nextState = cloneProviderServiceTypeSettings(
-        json?.item || draftState,
+        json?.item || draftState
       );
       setSavedState(nextState);
       setDraftState(cloneProviderServiceTypeSettings(nextState));
@@ -318,15 +282,13 @@ export function AdminConfigListsPanel() {
       setEditorState({
         mode: "list",
         index: null,
-        draft: createEmptyProviderServiceTypeItem(
-          (nextState.items.length + 1) * 10,
-        ),
+        draft: createEmptyProviderServiceTypeItem((nextState.items.length + 1) * 10),
       });
     } catch (nextError) {
       setSaveError(
         nextError instanceof Error
           ? nextError.message
-          : "Nu am putut salva tipurile de servicii.",
+          : "Nu am putut salva tipurile de servicii."
       );
     } finally {
       setSaving(false);
@@ -342,12 +304,12 @@ export function AdminConfigListsPanel() {
               <CardContent className="flex flex-col gap-4 p-6 md:flex-row md:items-center md:justify-between">
                 <div className="min-w-0 space-y-1">
                   <div className="flex items-center gap-2">
-                    <Settings2 className="text-muted-foreground size-4" />
-                    <p className="text-foreground text-sm font-medium">
+                    <Settings2 className="size-4 text-muted-foreground" />
+                    <p className="text-sm font-medium text-foreground">
                       {entry.title}
                     </p>
                   </div>
-                  <p className="text-muted-foreground text-sm">
+                  <p className="text-sm text-muted-foreground">
                     {entry.description}
                   </p>
                 </div>
@@ -373,7 +335,7 @@ export function AdminConfigListsPanel() {
           side="right"
           className="flex h-full flex-col p-0 sm:max-w-2xl"
         >
-          <div className="border-border border-b px-6 py-5">
+          <div className="border-b border-border px-6 py-5">
             <SheetHeader>
               <div className="flex items-center justify-between gap-3">
                 <div className="space-y-1">
@@ -393,28 +355,9 @@ export function AdminConfigListsPanel() {
 
           {editorState.mode === "list" ? (
             <>
-              <div className="border-border border-b px-6 py-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setDraftState(
-                      prepareLaunchProviderServiceTypeSettings(draftState),
-                    );
-                    setSaveError(null);
-                    setSaveOk(false);
-                  }}
-                >
-                  Pregătește cele 7 categorii de lansare
-                </Button>
-                <p className="text-muted-foreground mt-2 text-sm">
-                  Adaugă cele 7 categorii și dezactivează restul, păstrând
-                  cheile existente. Modificările se aplică după salvarea listei.
-                </p>
-              </div>
-              <div className="border-border flex flex-col gap-3 border-b px-6 py-4 sm:flex-row sm:items-center">
+              <div className="flex flex-col gap-3 border-b border-border px-6 py-4 sm:flex-row sm:items-center">
                 <div className="relative flex-1">
-                  <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                  <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     className="pl-9"
                     placeholder="Caută după valoare sau label"
@@ -422,15 +365,15 @@ export function AdminConfigListsPanel() {
                     onChange={(event) => setSearchValue(event.target.value)}
                   />
                 </div>
-                <div className="border-border flex items-center rounded-md border p-1">
+                <div className="flex items-center rounded-md border border-border p-1">
                   {STATUS_FILTER_OPTIONS.map((option) => (
                     <button
                       key={option.value}
                       type="button"
                       className={
                         statusFilter === option.value
-                          ? "bg-primary text-primary-foreground rounded-sm px-3 py-1.5 text-sm font-medium"
-                          : "text-muted-foreground rounded-sm px-3 py-1.5 text-sm"
+                          ? "rounded-sm bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground"
+                          : "rounded-sm px-3 py-1.5 text-sm text-muted-foreground"
                       }
                       onClick={() => setStatusFilter(option.value)}
                     >
@@ -442,74 +385,61 @@ export function AdminConfigListsPanel() {
 
               <div className="flex-1 overflow-y-auto px-6 py-4">
                 <div className="mb-4 flex justify-end">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={openAddEditor}
-                  >
+                  <Button type="button" variant="outline" onClick={openAddEditor}>
                     <Plus className="size-4" />
                     Adaugă tip serviciu
                   </Button>
                 </div>
 
-                <div className="border-border overflow-hidden rounded-lg border">
+                <div className="overflow-hidden rounded-lg border border-border">
                   {filteredItems.length ? (
                     filteredItems.map(({ item, index: sourceIndex }) => (
-                      <div
-                        key={`${item.value}-${item.sortOrder}-${sourceIndex}`}
-                        className="border-border grid gap-3 border-b px-4 py-3 last:border-b-0 md:grid-cols-[minmax(0,1.5fr)_110px_110px_auto] md:items-center"
-                      >
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-foreground text-sm font-medium">
-                              {item.labels.ro ||
-                                item.value ||
-                                "Tip serviciu nou"}
+                        <div
+                          key={`${item.value}-${item.sortOrder}-${sourceIndex}`}
+                          className="grid gap-3 border-b border-border px-4 py-3 last:border-b-0 md:grid-cols-[minmax(0,1.5fr)_110px_110px_auto] md:items-center"
+                        >
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="text-sm font-medium text-foreground">
+                                {item.labels.ro || item.value || "Tip serviciu nou"}
+                              </p>
+                              <Badge variant={item.enabled ? "success" : "outline"}>
+                                {item.enabled ? "Activ" : "Inactiv"}
+                              </Badge>
+                            </div>
+                            <p className="truncate text-xs text-muted-foreground">
+                              {item.value || "Fără valoare stabilă"} · EN: {item.labels.en || "—"}
                             </p>
-                            <Badge
-                              variant={item.enabled ? "success" : "outline"}
-                            >
-                              {item.enabled ? "Activ" : "Inactiv"}
-                            </Badge>
                           </div>
-                          <p className="text-muted-foreground truncate text-xs">
-                            {item.value || "Fără valoare stabilă"} · EN:{" "}
-                            {item.labels.en || "—"}
-                          </p>
+                          <div className="text-sm text-muted-foreground">
+                            Sortare {item.sortOrder}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {item.enabled ? "Vizibil la selecție" : "Ascuns la selecție"}
+                          </div>
+                          <div className="flex items-center justify-start gap-2 md:justify-end">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openEditEditor(sourceIndex)}
+                            >
+                              <Pencil className="size-4" />
+                              Editează
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => updateItemEnabled(sourceIndex, !item.enabled)}
+                            >
+                              {item.enabled ? "Dezactivează" : "Reactivează"}
+                            </Button>
+                          </div>
                         </div>
-                        <div className="text-muted-foreground text-sm">
-                          Sortare {item.sortOrder}
-                        </div>
-                        <div className="text-muted-foreground text-sm">
-                          {item.enabled
-                            ? "Vizibil la selecție"
-                            : "Ascuns la selecție"}
-                        </div>
-                        <div className="flex items-center justify-start gap-2 md:justify-end">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openEditEditor(sourceIndex)}
-                          >
-                            <Pencil className="size-4" />
-                            Editează
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              updateItemEnabled(sourceIndex, !item.enabled)
-                            }
-                          >
-                            {item.enabled ? "Dezactivează" : "Reactivează"}
-                          </Button>
-                        </div>
-                      </div>
-                    ))
+                      ))
                   ) : (
-                    <div className="text-muted-foreground px-4 py-8 text-center text-sm">
+                    <div className="px-4 py-8 text-center text-sm text-muted-foreground">
                       Nu există iteme care să corespundă filtrului curent.
                     </div>
                   )}
@@ -519,12 +449,7 @@ export function AdminConfigListsPanel() {
           ) : (
             <div className="flex flex-1 flex-col overflow-y-auto px-6 py-5">
               <div className="mb-5">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={closeEditor}
-                >
+                <Button type="button" variant="ghost" size="sm" onClick={closeEditor}>
                   <ArrowLeft className="size-4" />
                   Înapoi la listă
                 </Button>
@@ -537,7 +462,7 @@ export function AdminConfigListsPanel() {
                       ? "Adaugă tip serviciu"
                       : "Editează tip serviciu"}
                   </h3>
-                  <p className="text-muted-foreground text-sm">
+                  <p className="text-sm text-muted-foreground">
                     Editează textele afișate în UI; cheia internă este generată
                     automat la creare și rămâne stabilă după salvare.
                   </p>
@@ -546,24 +471,16 @@ export function AdminConfigListsPanel() {
                 <div className="grid gap-4 sm:grid-cols-2">
                   {editorState.index !== null && editorState.draft.value ? (
                     <div className="space-y-2 sm:col-span-2">
-                      <label className="text-sm font-medium">
-                        Cheie internă
-                      </label>
-                      <div className="border-border bg-muted/40 text-muted-foreground rounded-md border px-3 py-2 text-sm">
+                      <label className="text-sm font-medium">Cheie internă</label>
+                      <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
                         {editorState.draft.value}
                       </div>
                     </div>
                   ) : null}
                   <div className="space-y-2">
-                    <label
-                      htmlFor="service-label-ro"
-                      className="text-sm font-medium"
-                    >
-                      Denumire RO
-                    </label>
+                    <label className="text-sm font-medium">Label RO</label>
                     <Input
-                      id="service-label-ro"
-                      placeholder="Instalator"
+                      placeholder="Curățenie rezidențială"
                       value={editorState.draft.labels.ro}
                       onChange={(event) =>
                         updateDraftLabel("ro", event.target.value)
@@ -576,15 +493,9 @@ export function AdminConfigListsPanel() {
                     ) : null}
                   </div>
                   <div className="space-y-2">
-                    <label
-                      htmlFor="service-label-en"
-                      className="text-sm font-medium"
-                    >
-                      Denumire EN
-                    </label>
+                    <label className="text-sm font-medium">Label EN</label>
                     <Input
-                      id="service-label-en"
-                      placeholder="Plumber"
+                      placeholder="Residential cleaning"
                       value={editorState.draft.labels.en}
                       onChange={(event) =>
                         updateDraftLabel("en", event.target.value)
@@ -596,81 +507,20 @@ export function AdminConfigListsPanel() {
                       </p>
                     ) : null}
                   </div>
-                  {(["ro", "en"] as const).map((locale) => (
-                    <div key={locale} className="space-y-2 sm:col-span-2">
-                      <label
-                        htmlFor={`service-description-${locale}`}
-                        className="text-sm font-medium"
-                      >
-                        Descriere {locale.toUpperCase()}
-                      </label>
-                      <textarea
-                        id={`service-description-${locale}`}
-                        maxLength={500}
-                        rows={3}
-                        className="border-border bg-background w-full rounded-md border px-3 py-2 text-sm"
-                        value={editorState.draft.descriptions?.[locale] || ""}
-                        onChange={(event) =>
-                          updateDraftDescription(locale, event.target.value)
-                        }
-                      />
-                    </div>
-                  ))}
                   <div className="space-y-2">
-                    <label
-                      htmlFor="service-icon"
-                      className="text-sm font-medium"
-                    >
-                      Pictogramă
-                    </label>
-                    <select
-                      id="service-icon"
-                      className="border-border bg-background w-full rounded-md border px-3 py-2 text-sm"
-                      value={editorState.draft.icon || "Wrench"}
-                      onChange={(event) =>
-                        updateDraftItem(
-                          "icon",
-                          event.target.value as ProviderServiceTypeIcon,
-                        )
-                      }
-                    >
-                      {PROVIDER_SERVICE_TYPE_ICONS.map((icon) => (
-                        <option key={icon} value={icon}>
-                          {
-                            {
-                              Wrench: "Instalații",
-                              Zap: "Electricitate",
-                              Sparkles: "Curățenie",
-                              Hammer: "Renovări",
-                              Truck: "Transport",
-                              HeartHandshake: "Îngrijire",
-                              Scissors: "Beauty",
-                            }[icon]
-                          }
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label
-                      htmlFor="service-order"
-                      className="text-sm font-medium"
-                    >
-                      Sortare
-                    </label>
+                    <label className="text-sm font-medium">Sortare</label>
                     <Input
-                      id="service-order"
                       type="number"
                       value={editorState.draft.sortOrder}
                       onChange={(event) =>
                         updateDraftItem(
                           "sortOrder",
-                          Number(event.target.value || 0),
+                          Number(event.target.value || 0)
                         )
                       }
                     />
                   </div>
-                  <label className="border-border flex items-center gap-2 self-end rounded-md border px-3 py-2 text-sm">
+                  <label className="flex items-center gap-2 self-end rounded-md border border-border px-3 py-2 text-sm">
                     <input
                       type="checkbox"
                       className="size-4"
@@ -686,7 +536,7 @@ export function AdminConfigListsPanel() {
             </div>
           )}
 
-          <div className="border-border bg-background sticky bottom-0 mt-auto border-t px-6 py-4">
+          <div className="sticky bottom-0 mt-auto border-t border-border bg-background px-6 py-4">
             {editorState.mode === "list" ? (
               <SheetFooter className="items-start sm:items-center">
                 <div className="mr-auto space-y-1">
