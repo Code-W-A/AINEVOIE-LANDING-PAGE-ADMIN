@@ -453,6 +453,9 @@ export default function ProviderDetailPage() {
       <ProviderDetailTabs
         provider={provider}
         data={data}
+        providerId={providerId}
+        canEditProfile={Boolean(adminEmail)}
+        onSaved={() => { void loadDetails({ showLoading: false }); }}
         status={status}
         profileOk={profileOk}
         availabilityOk={availabilityOk}

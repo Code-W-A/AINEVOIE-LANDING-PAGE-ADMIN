@@ -41,6 +41,9 @@ export function ProviderDetailTabs({
   locationLabel,
   avatarPreviewUrl,
   avatarPreviewLoading,
+  providerId,
+  canEditProfile,
+  onSaved,
   onViewDocument,
 }: {
   provider: ProviderDocument;
@@ -52,6 +55,9 @@ export function ProviderDetailTabs({
   locationLabel: string;
   avatarPreviewUrl: string | null;
   avatarPreviewLoading: boolean;
+  providerId: string;
+  canEditProfile: boolean;
+  onSaved: () => void;
   onViewDocument: (type: ProviderDocumentType, title: string) => void;
 }) {
   const [activeTab, setActiveTab] = useState<string>(TABS.presentation);
@@ -102,6 +108,9 @@ export function ProviderDetailTabs({
           providerDirectory={data.providerDirectory}
           avatarPreviewUrl={avatarPreviewUrl}
           avatarPreviewLoading={avatarPreviewLoading}
+          providerId={providerId}
+          canEditProfile={canEditProfile}
+          onSaved={onSaved}
         />
       </TabContent>
 
