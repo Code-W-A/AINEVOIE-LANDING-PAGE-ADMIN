@@ -704,5 +704,13 @@
     "privacyTitle": "Politica de confidențialitate",
     "cookiesTitle": "Politica cookies",
     "gdprTitle": "GDPR"
+  },
+  "CompanyInfo": {
+    "title": "Informații legale",
+    "operator": "Platforma Ainevoie este operată de:",
+    "name": "Denumirea societății",
+    "registeredOffice": "Sediu social",
+    "tradeRegisterNumber": "Nr. Registrul Comerțului (ORCT Bihor)",
+    "taxId": "CUI"
   }
 }

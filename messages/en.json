@@ -704,5 +704,13 @@
     "privacyTitle": "Privacy policy",
     "cookiesTitle": "Cookie policy",
     "gdprTitle": "GDPR"
+  },
+  "CompanyInfo": {
+    "title": "Legal information",
+    "operator": "The Ainevoie platform is operated by:",
+    "name": "Company name",
+    "registeredOffice": "Registered office",
+    "tradeRegisterNumber": "Trade Register number (ORCT Bihor)",
+    "taxId": "Tax identification number (CUI)"
   }
 }

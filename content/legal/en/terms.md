@@ -1,4 +1,4 @@
-**Last updated:** 9 August 2026
+**Last updated:** 24 October 2026
 
 These Terms & Conditions ("**Terms**") govern access to and use of the Ainevoie website, provider onboarding flow, account areas, newsletter, contact form, and any related marketplace features that are made available from time to time (together, the "**Platform**"). Ainevoie is a marketplace for connecting customers with independent service providers, including cleaning and related services.
 
@@ -6,7 +6,7 @@ By using the Platform or creating an account, you confirm that you have read and
 
 ## 1. Operator and contact
 
-The Platform is operated by the legal entity responsible for Ainevoie, established in Romania and identified in the public contact details of the Platform. The Operator's activity related to the website and application includes, for CAEN classification purposes, business and management consultancy activities (**CAEN 7020**). Until full company details are published in the dedicated legal notice, you can contact us at **contact@ai-nevoie.ro**.
+The Platform is operated by AINEVOIE S.R.L., with its registered office at Strada Mezladului, nr. 24, municipiul Oradea, județul Bihor, registered with the Trade Register (ORCT Bihor) under no. J2026017297000, tax identification number (CUI) 54256106. You can contact us at contact@ai-nevoie.ro.
 
 ## 2. Eligibility
 

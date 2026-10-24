@@ -2,6 +2,7 @@
 
 import { Checkbox } from "@/components/ui/checkbox";
 import AppStoreLinks from "@/components/AppStoreLinks";
+import CompanyInfo from "@/components/Legal/CompanyInfo";
 import FooterBottom from "@/components/Footer/FooterBottom";
 import { Link } from "@/i18n/navigation";
 import { FooterMenu } from "@/types/footerMenu";
@@ -144,6 +145,9 @@ const Footer = () => {
                     />
                   </Link>
                   <p className="text-body mb-6 text-base">{t("tagline")}</p>
+                  <div className="mb-6">
+                    <CompanyInfo />
+                  </div>
                   <p className="mb-3 text-sm font-medium text-black dark:text-white">
                     {t("downloadApp")}
                   </p>

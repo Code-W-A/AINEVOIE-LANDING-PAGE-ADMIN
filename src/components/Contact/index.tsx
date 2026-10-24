@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import CompanyInfo from "@/components/Legal/CompanyInfo";
 import toast from "react-hot-toast";
 
 const CONTACT_REQUEST_TIMEOUT_MS = 30000;
@@ -112,6 +113,9 @@ const Contact = () => {
             className="wow fadeInUp shadow-card dark:shadow-card-dark mx-auto w-full max-w-[925px] rounded-lg bg-[#F8FAFB] px-8 py-10 sm:px-10 dark:bg-[#15182B]"
             data-wow-delay=".3s"
           >
+            <div className="mb-8">
+              <CompanyInfo />
+            </div>
             <form onSubmit={handleSubmit}>
               <div className="-mx-[22px] flex flex-wrap">
                 <div className="w-full px-[22px] md:w-1/2">
