@@ -1162,7 +1162,7 @@ export default function ProviderOnboardingFormWizard({
         setIdentityDocument((previous) => ({
           ...previous,
           status: "error",
-          error: t("uploadRequired"),
+          error: t("identityDocumentRequired"),
         }));
       }
       if (
@@ -1173,7 +1173,7 @@ export default function ProviderOnboardingFormWizard({
         setProfessionalDocument((previous) => ({
           ...previous,
           status: "error",
-          error: t("uploadRequired"),
+          error: t("professionalDocumentRequired"),
         }));
       }
       if (
