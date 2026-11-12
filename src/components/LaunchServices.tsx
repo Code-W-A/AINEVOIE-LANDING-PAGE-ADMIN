@@ -14,6 +14,8 @@ const illustrations: Record<string, string> = {
   "Mutari Si Transport": "moving",
   "Bone Si Ingrijire Persoane": "family",
   Beauty: "hairdresser",
+  Masaj: "massage-therapist",
+  "Medical La Domiciliu": "medical-care",
 };
 
 export default function LaunchServices() {
@@ -32,8 +34,8 @@ export default function LaunchServices() {
           className="text-3xl font-bold tracking-tight text-black dark:text-white"
         >
           {ro
-            ? "7 domenii de servicii pentru început"
-            : "7 service categories to start with"}
+            ? `${services.length} domenii de servicii pentru început`
+            : `${services.length} service categories to start with`}
         </h2>
         <p className="text-body mt-4 leading-relaxed dark:text-slate-300">
           {ro

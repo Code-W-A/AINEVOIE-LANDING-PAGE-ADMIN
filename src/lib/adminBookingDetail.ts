@@ -36,6 +36,11 @@ export type BookingAddOn = {
 };
 
 export type BookingDocument = Record<string, unknown> & {
+  paymentFlowProfile?: string | null;
+  offer?: { description: string; offerTotal: number; advanceAmount: number; remainingAmount: number; version: number; status: string } | null;
+  refundSummary?: { status?: string; stripeRefundId?: string; amountRefunded?: number } | null;
+  offerOperationalAlert?: { code: string; detectedAt?: string } | null;
+  cancellationRequest?: { status: string; reason?: string } | null;
   bookingId?: string;
   requestNumber?: number | null;
   bookingType?: string | null;

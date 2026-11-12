@@ -1,6 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { BookingOfferSummary } from "../BookingOfferSummary";
 import { Badge } from "@/components/ui/badge";
 import { FieldValue } from "@/app/(studio)/admin/prestatori/[id]/components/shared/FieldValue";
 import {
@@ -44,6 +45,7 @@ export function BookingSummaryTab({
         <FieldValue label="ID cerere" value={requestNumber || "-"} />
         <FieldValue label="Tip programare" value={formatBookingTypeLabel(booking)} />
         <FieldValue label="Status operațional" value={operationalState} />
+        <BookingOfferSummary booking={booking} />
         <FieldValue label="Serviciu" value={getServiceName(booking)} />
         <FieldValue label="Început" value={formatAdminDateTime(booking.scheduledStartAt)} />
         <FieldValue label="Sfârșit" value={formatAdminDateTime(booking.scheduledEndAt)} />

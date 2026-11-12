@@ -43,9 +43,13 @@ describe("public provider service types route", () => {
 
     expect(response.status).toBe(200);
     expect(json.item.items.length).toBeGreaterThan(0);
+    expect(json.item.items).toEqual(expect.arrayContaining([
+      expect.objectContaining({ value: "Masaj", labels: { ro: "Masaj", en: "Massage" }, sortOrder: 80 }),
+      expect.objectContaining({ value: "Medical La Domiciliu", labels: { ro: "Medical la domiciliu", en: "Home medical care" }, sortOrder: 90 }),
+    ]));
     expect(json.item.items[0]).toMatchObject({
-      value: "Curatenie rezidentiala",
-      labels: expect.objectContaining({ ro: "Curățenie rezidențială" }),
+      value: "Instalator",
+      labels: expect.objectContaining({ ro: "Instalator" }),
     });
   });
 

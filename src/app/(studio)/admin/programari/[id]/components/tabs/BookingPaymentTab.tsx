@@ -32,7 +32,13 @@ export function BookingPaymentTab({ payment }: { payment: PaymentDocument | null
         <CardDescription>Sumarul plății asociate programării.</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <FieldValue label="Total" value={formatBookingAmount(payment)} />
+        <FieldValue label={payment.paymentFlowProfile === 'offer_advance_v1' ? 'Avans în aplicație' : 'Total'} value={formatBookingAmount(payment)} />
+        {payment.paymentFlowProfile === 'offer_advance_v1' && <>
+          <FieldValue label="Total ofertă" value={`${payment.offerTotal} ${payment.currency}`} />
+          <FieldValue label="De achitat direct prestatorului" value={`${payment.remainingAmount} ${payment.currency}`} />
+          <FieldValue label="Comision platformă" value={`${payment.platformFeeAmount} ${payment.currency}`} />
+          <FieldValue label="De virat prestatorului din avans" value="0" />
+        </>}
         <FieldValue
           label="Status plată"
           value={<Badge variant={getPaymentStatusVariant(status)}>{formatBookingPaymentStatusLabel(status)}</Badge>}

@@ -96,5 +96,33 @@
     "icon": "Scissors",
     "enabled": true,
     "sortOrder": 70
+  },
+  {
+    "value": "Masaj",
+    "labels": {
+      "ro": "Masaj",
+      "en": "Massage"
+    },
+    "descriptions": {
+      "ro": "Masaj de relaxare și întreținere",
+      "en": "Relaxation and wellness massage"
+    },
+    "icon": "HandHeart",
+    "enabled": true,
+    "sortOrder": 80
+  },
+  {
+    "value": "Medical La Domiciliu",
+    "labels": {
+      "ro": "Medical la domiciliu",
+      "en": "Home medical care"
+    },
+    "descriptions": {
+      "ro": "Servicii medicale și îngrijire la domiciliu",
+      "en": "Medical services and care at home"
+    },
+    "icon": "HeartPulse",
+    "enabled": true,
+    "sortOrder": 90
   }
 ]

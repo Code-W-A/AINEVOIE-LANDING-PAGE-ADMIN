@@ -963,6 +963,14 @@ export default function SettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              <label className="flex items-start gap-3 rounded-lg border border-border p-4">
+                <input type="checkbox" disabled={appUpdateLoading} checked={appUpdateState.offerAdvanceEnabled}
+                  onChange={event => updateAppUpdateField("offerAdvanceEnabled", event.target.checked)} />
+                <span>Oferte cu avans egal cu comisionul pentru cererile individuale noi.
+                  <span className="block text-sm text-muted-foreground">Activează după actualizarea backendului și aplicațiilor. Abonamentele păstrează fluxul existent.</span>
+                </span>
+              </label>
+
               {appUpdateLoading ? (
                 <AdminFormGridSkeleton fields={1} />
               ) : (

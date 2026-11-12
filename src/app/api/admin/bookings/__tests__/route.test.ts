@@ -43,6 +43,12 @@ describe("GET /api/admin/bookings", () => {
     });
   });
 
+  it("forwards the operational attention filter", async () => {
+    const { GET } = await import("../route");
+    await GET(new Request("https://example.com/api/admin/bookings?offerAttentionOnly=true"));
+    expect(mocks.callAdminCallable).toHaveBeenCalledWith("listAdminBookings", expect.objectContaining({ offerAttentionOnly: true }), expect.any(String), "token");
+  });
+
   it("passes filters to listAdminBookings and paginates the response", async () => {
     const { GET } = await import("../route");
     const response = await GET(

@@ -5,6 +5,10 @@ import { serializeRouteError } from "@/lib/adminRouteError";
 export type PaymentWebhookState = "ok" | "delayed" | "missing";
 
 export type PaymentAdminListItem = {
+  offerTotal?: number;
+  advanceAmount?: number;
+  remainingAmount?: number;
+  paymentFlowProfile?: string;
   paymentId: string;
   bookingId: string | null;
   userId: string | null;
@@ -523,6 +527,10 @@ export async function listAdminPayments(
       createdAt: toIso(payment.createdAt),
       updatedAt: toIso(payment.updatedAt),
       amount: toNumber(payment.amount),
+      offerTotal: toNumber(payment.offerTotal),
+      advanceAmount: toNumber(payment.advanceAmount),
+      remainingAmount: toNumber(payment.remainingAmount),
+      paymentFlowProfile: readString(payment.paymentFlowProfile),
       grossAmount: toNumber(payment.grossAmount) || toNumber(payment.amount),
       platformFeePercent: toNumber(payment.platformFeePercent),
       platformFeeAmount: toNumber(payment.platformFeeAmount),

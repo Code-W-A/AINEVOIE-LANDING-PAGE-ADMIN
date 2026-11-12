@@ -7,6 +7,7 @@ export type AppUpdateLocale = "ro" | "en";
 export type AppUpdateSettings = {
   enabled: boolean;
   bookingPreauthorizationEnabled: boolean;
+  offerAdvanceEnabled: boolean;
   platformFeePercent: number;
   minPayoutAmount: number;
   mode: AppUpdateMode;
@@ -30,6 +31,7 @@ export function getDefaultAppUpdateSettings(): AppUpdateSettings {
   return {
     enabled: false,
     bookingPreauthorizationEnabled: false,
+    offerAdvanceEnabled: false,
     platformFeePercent: 20,
     minPayoutAmount: 50,
     mode: "notice",
@@ -98,6 +100,7 @@ function buildRevision(settings: AppUpdateSettings) {
   return [
     settings.enabled ? "enabled" : "disabled",
     settings.bookingPreauthorizationEnabled ? "booking-preauth-enabled" : "booking-preauth-disabled",
+    settings.offerAdvanceEnabled ? "offers-enabled" : "offers-disabled",
     settings.platformFeePercent,
     settings.minPayoutAmount,
     settings.mode,
@@ -126,6 +129,7 @@ export function sanitizeAppUpdateSettings(raw: unknown): AppUpdateSettings {
   const settings: AppUpdateSettings = {
     enabled: source.enabled === true,
     bookingPreauthorizationEnabled: source.bookingPreauthorizationEnabled === true,
+    offerAdvanceEnabled: source.offerAdvanceEnabled === true,
     platformFeePercent: sanitizePlatformFeePercent(source.platformFeePercent),
     minPayoutAmount: sanitizeMinPayoutAmount(source.minPayoutAmount),
     mode: source.mode === "force" ? "force" : "notice",
@@ -154,6 +158,7 @@ export function sanitizeAppUpdateSettings(raw: unknown): AppUpdateSettings {
 }
 
 export function validateAppUpdateSettings(settings: AppUpdateSettings) {
+  if (settings.offerAdvanceEnabled && (settings.platformFeePercent <= 0 || settings.platformFeePercent >= 100)) return "Ofertele necesită un comision strict între 0% și 100%.";
   if (!settings.enabled) {
     return null;
   }
@@ -173,6 +178,7 @@ export function getPublicAppUpdateSettings(settings: AppUpdateSettings) {
   return {
     enabled: settings.enabled,
     bookingPreauthorizationEnabled: settings.bookingPreauthorizationEnabled,
+    offerAdvanceEnabled: settings.offerAdvanceEnabled,
     platformFeePercent: settings.platformFeePercent,
     minPayoutAmount: settings.minPayoutAmount,
     mode: settings.mode,

@@ -64,6 +64,9 @@ export async function DELETE(request: Request, context: RouteContext) {
       return NextResponse.json({ error: "Programarea nu există." }, { status: 404 });
     }
 
+    if (bookingSnap.data()?.paymentFlowProfile === 'offer_advance_v1') {
+      return NextResponse.json({ error: 'Ofertele și istoricul avansului se păstrează. Folosește anularea programării.' }, { status: 409 });
+    }
     await bookingRef.delete();
 
     return NextResponse.json({

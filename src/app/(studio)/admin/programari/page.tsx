@@ -39,6 +39,7 @@ import {
 
 type BookingListItem = {
   bookingId: string;
+  offerOperationalAlert?: { code: string } | null;
   status?: string;
   userId?: string;
   providerId?: string;
@@ -195,6 +196,7 @@ function formatRequestResponseMeta(item: BookingListItem) {
 }
 
 export default function AdminBookingsPage() {
+  const [offerAttentionOnly, setOfferAttentionOnly] = useState(false);
   const [q, setQ] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
   const [status, setStatus] = useState("all");
@@ -221,9 +223,10 @@ export default function AdminBookingsPage() {
     if (debouncedQ.trim()) params.set("q", debouncedQ.trim());
     if (status !== "all") params.set("status", status);
     if (paymentStatus !== "all") params.set("paymentStatus", paymentStatus);
+    if (offerAttentionOnly) params.set("offerAttentionOnly", "true");
     if (authorizationExpiringOnly) params.set("authorizationExpiringOnly", "true");
     return `/api/admin/bookings?${params.toString()}`;
-  }, [authorizationExpiringOnly, debouncedQ, page, paymentStatus, status]);
+  }, [offerAttentionOnly, authorizationExpiringOnly, debouncedQ, page, paymentStatus, status]);
 
   const { data, loading, error, reload } = useAdminData<BookingsResponse>(endpoint);
   const items = data?.items ?? EMPTY_BOOKINGS;
@@ -384,6 +387,10 @@ export default function AdminBookingsPage() {
             />
             Autorizații care expiră în următoarele 24 de ore
           </label>
+          <label className="flex items-center gap-2">
+            <input type="checkbox" checked={offerAttentionOnly} disabled={loading} onChange={(event) => { setPage(1); setOfferAttentionOnly(event.target.checked); }} />
+            Oferte cu avans — necesită intervenție
+          </label>
         </CardContent>
       </Card>
 
@@ -514,6 +521,7 @@ export default function AdminBookingsPage() {
                           </div>
                         ) : null}
                         <Badge variant={badgeVariant(item.status)}>{label(item.status)}</Badge>
+                        {item.offerOperationalAlert && <Badge variant="warning">Necesită intervenție</Badge>}
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">

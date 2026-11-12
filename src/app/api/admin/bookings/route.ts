@@ -20,6 +20,7 @@ export async function GET(request: Request) {
     const limit = Math.min(page * pageSize, 100);
     const filters = {
       limit,
+      ...(searchParams.get("offerAttentionOnly") === "true" ? { offerAttentionOnly: true } : {}),
       search: searchParams.get("q")?.trim() || undefined,
       status: searchParams.get("status")?.trim() || undefined,
       paymentStatus: searchParams.get("paymentStatus")?.trim() || undefined,
